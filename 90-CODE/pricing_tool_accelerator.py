@@ -41,7 +41,7 @@ RESOURCE_SETUP_ENABLED = True                        # Feature toggle
 
 # ============================================================================
 
-from cli_interface import collect_user_inputs, collect_cli_fields
+from cli_interface import collect_user_inputs, collect_cli_fields, collect_margin_percentage
 from file_operations import get_source_file_info, copy_file_with_rename
 from naming_utils import generate_output_filename, get_current_date_string, handle_filename_collision
 from system_integration import (
@@ -57,12 +57,15 @@ from data_population_orchestrator import populate_spreadsheet_data, show_populat
 from data_population_orchestrator import populate_spreadsheet_data_with_cli
 # Feature 005: Resource Setup Population imports
 from data_population_orchestrator import populate_spreadsheet_data_with_cli_and_resources
+# Feature 006: Rate Card Population imports
+from data_population_orchestrator import populate_spreadsheet_data_with_cli_resources_and_rates, populate_spreadsheet_data_consolidated_session
 
 
 def main() -> None:
     """Main entry point for the pricing tool accelerator."""
     print("🚀 DTT Pricing Tool Accelerator v1.0.0")
-    print("   Automating pricing tool spreadsheet setup...\n")
+    print("   Automating pricing tool spreadsheet setup...")
+    print("   Features: File Copy + Data Population + Resource Setup + Rate Card Calculation\n")
     
     # Validate system requirements
     if not validate_system_requirements():
@@ -99,6 +102,9 @@ def main() -> None:
         print(f"\n📝 Client: {client_name}")
         print(f"📝 Opportunity: {gig_name}")  # Updated display name
         
+        # Step 2.5: Feature 006 - Collect client margin percentage
+        margin_decimal = collect_margin_percentage()
+        
         # Step 3: Generate output filename  
         current_date = get_current_date_string()
         base_filename = generate_output_filename(current_date, client_name, gig_name, version)
@@ -129,13 +135,20 @@ def main() -> None:
             print("   (This may trigger permission dialogs - please allow access)")
         
         try:
-            population_summary = populate_spreadsheet_data_with_cli_and_resources(
+            # Try consolidated Excel session approach first (single open/close)
+            print("⚡ Using optimized single-session Excel workflow...")
+            print("   (This eliminates multiple permission dialogs!)")
+            
+            population_summary = populate_spreadsheet_data_consolidated_session(
                 final_output_path, 
                 CONSTANTS_FILENAME,
                 cli_data,  # Feature 003: Include CLI data
+                margin_decimal,  # Feature 006: Include client margin
                 CONSTANTS_DIR_NAME,
                 FIELD_MATCH_THRESHOLD,
-                RESOURCE_SETUP_ENABLED  # Feature 005: Include Resource Setup
+                RESOURCE_SETUP_ENABLED,  # Feature 005: Include Resource Setup
+                True,  # Feature 006: Enable rate card calculation
+                7  # Resource row count
             )
             show_population_feedback(population_summary)
             
