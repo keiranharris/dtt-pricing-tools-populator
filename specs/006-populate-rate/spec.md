@@ -63,7 +63,7 @@ The rate card population integrates seamlessly into the existing pricing tool wo
 
 ### Functional Requirements
 
-- **FR-001**: System MUST prompt user for "Client Margin %:" during CLI execution
+- **FR-001**: System MUST prompt user for "Client Margin %:" at the beginning of CLI execution with other initial inputs
 - **FR-002**: System MUST validate margin input as whole number between 35 and 65 inclusive
 - **FR-003**: System MUST reject invalid margin inputs and re-prompt until valid input received
 - **FR-004**: System MUST convert margin percentage to decimal format (e.g., 44% becomes 0.44) for calculations
@@ -73,6 +73,8 @@ The rate card population integrates seamlessly into the existing pricing tool wo
 - **FR-008**: System MUST read standard cost rates from column Q (Q28-Q34) for calculation inputs
 - **FR-009**: System MUST preserve existing spreadsheet data and formatting while adding rate calculations
 - **FR-010**: System MUST provide clear feedback on successful rate card population completion
+- **FR-011**: System MUST skip cells with invalid or missing cost rate data, continue processing valid cells, and report which staff levels were skipped
+- **FR-012**: System MUST overwrite existing data in target cells O28-O34 without warning to ensure current calculations
 
 ### Key Entities *(include if feature involves data)*
 
@@ -88,7 +90,7 @@ The rate card population integrates seamlessly into the existing pricing tool wo
 
 - **SC-001**: Users can input client margin percentage in under 30 seconds with clear validation feedback
 - **SC-002**: System calculates and populates all seven engineering rates in under 5 seconds
-- **SC-003**: Rate calculations are mathematically accurate to 2 decimal places for currency formatting
+- **SC-003**: Rate calculations are rounded to the nearest whole integer (no cents) for easier handling
 - **SC-004**: 100% of valid margin inputs (35-65) result in successful rate card population
 - **SC-005**: Invalid margin inputs are rejected with clear error messages and re-prompt functionality
 - **SC-006**: Feature integrates seamlessly with existing workflow without disrupting previous automation steps
@@ -100,6 +102,15 @@ The rate card population integrates seamlessly into the existing pricing tool wo
 - Column O is available for rate population and not protected or containing critical existing formulas
 - Standard cost rates represent annual or hourly costs that can be directly used in margin calculations
 - The pricing spreadsheet follows the established structure with consistent row positioning for staff levels
+
+## Clarifications
+
+### Session 2025-10-13
+
+- Q: How should the system handle individual cells in column Q (Q28-Q34) that contain invalid or missing cost rate data? → A: Skip invalid cells, continue with valid ones, report which were skipped
+- Q: How should the system handle existing data in the target cells O28-O34? → A: Overwrite existing data without warning (clean automation)
+- Q: When in the overall workflow should the margin percentage prompt appear? → A: At the very beginning with other initial inputs (client, gig names)
+- Q: Should the calculated rates include cents or be whole numbers? → A: Round to nearest whole integer (no cents) for easier handling
 
 ## Dependencies
 
