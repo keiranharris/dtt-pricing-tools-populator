@@ -1,6 +1,6 @@
 # Feature Specification: Populate Rate Card at Given Margin
 
-**Feature Branch**: `006-006-populate-rate`  
+**Feature Branch**: `006-populate-rate`  
 **Created**: 2025-10-13  
 **Status**: Draft  
 **Input**: User description: "006-populate-rate-card-at-given-margin - ok, i need to ask for another field at execution time from the CLI. Its 'Client Margin %:' and needs to be a whole number between 35 and 65 (reject all others and loop around to ask again). When you have this number, we will use it in a formula to populate the rates in our rate card. It is importnt this step happens after the feature-005 code as it relies on those resources being in the sheet. For this step, we are filling out the 'Eng Rate $ (excl GST)*' column, per each of the 7 staff levels on the rate card from the previous feature. This column is 'O' and the 7 levels are O28 -> O34. The formula for each row is: = 'FY 26 Std Cost Rate' / (1 - 'Client Margin %') noting that - 'FY 26 Std Cost Rate' = column 'Q' - 'Client Margin %' is what the user entered at the CLI converted to a 2 decimal place bewteen 0 and 1 (e.g. 44% is 0.44)"
