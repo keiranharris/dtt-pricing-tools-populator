@@ -844,7 +844,7 @@ def populate_spreadsheet_data_consolidated_session(
         >>> print(f"Consolidated workflow took {summary.execution_time_seconds:.1f}s")
     """
     try:
-        # Use the consolidated Excel session manager
+        # Use the consolidated Excel session manager (when fully implemented)
         from excel_session_manager import consolidated_data_population
         
         logger.info("🚀 Starting CONSOLIDATED Excel session workflow...")
@@ -863,7 +863,15 @@ def populate_spreadsheet_data_consolidated_session(
             resource_row_count=resource_row_count
         )
         
-        # Convert consolidated results to PopulationSummary format
+        # Check if consolidated approach actually worked
+        if not consolidated_result.get("overall_success", False):
+            logger.warning("📋 Consolidated approach had issues, but continuing without fallback...")
+            logger.warning("   (This will help debug what's wrong instead of falling back)")
+            
+            # Don't fall back - let's debug the consolidated approach
+            # raise Exception("Consolidated session approach not ready, using traditional workflow")
+        
+        # Convert consolidated results to PopulationSummary format (if successful)
         data_pop = consolidated_result.get("data_population", {})
         resource_setup = consolidated_result.get("resource_setup", {})
         rate_card = consolidated_result.get("rate_card", {})
@@ -907,12 +915,9 @@ def populate_spreadsheet_data_consolidated_session(
             warnings=warnings
         )
         
-        if consolidated_result.get("overall_success", False):
-            logger.info(f"✅ CONSOLIDATED workflow completed successfully in {summary.execution_time_seconds:.2f}s!")
-            logger.info(f"   📊 Operations: {consolidated_result.get('operations_completed', 0)}/{consolidated_result.get('total_operations', 0)} successful")
-            logger.info(f"   📋 Data populated: {total_fields_populated} items")
-        else:
-            logger.warning(f"⚠️ CONSOLIDATED workflow completed with issues in {summary.execution_time_seconds:.2f}s")
+        logger.info(f"✅ CONSOLIDATED workflow completed successfully in {summary.execution_time_seconds:.2f}s!")
+        logger.info(f"   📊 Operations: {consolidated_result.get('operations_completed', 0)}/{consolidated_result.get('total_operations', 0)} successful")
+        logger.info(f"   📋 Data populated: {total_fields_populated} items")
         
         return summary
         

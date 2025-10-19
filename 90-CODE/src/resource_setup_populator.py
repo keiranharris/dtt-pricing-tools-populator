@@ -535,3 +535,126 @@ def get_resource_setup_summary(copy_result: ResourceCopyResult) -> str:
     else:
         error_summary = "; ".join(copy_result.error_messages[:2])  # Limit to first 2 errors
         return f"❌ Resource Setup failed: {error_summary}"
+
+
+def copy_resource_setup_in_worksheet(
+    target_worksheet,
+    source_file: Path,
+    resource_row_count: int = 7,
+    worksheet_name: str = "Resource Setup"
+) -> ResourceCopyResult:
+    """
+    Copy resource setup data using an already-open target worksheet.
+    
+    This function works with an existing xlwings target worksheet object but still
+    needs to open the source file temporarily. This reduces Excel operations from
+    2 separate target file opens to just 1 source file open within an existing session.
+    
+    Args:
+        target_worksheet: xlwings worksheet object for target (already open)
+        source_file: Path to constants file containing resource data
+        resource_row_count: Number of resource rows to copy (default 7)
+        worksheet_name: Name of worksheet containing resource data in source
+        
+    Returns:
+        ResourceCopyResult with details of the operation
+        
+    Example:
+        >>> with ExcelSessionManager(target_file) as session:
+        ...     target_ws = session.get_worksheet("Resource Setup")
+        ...     result = copy_resource_setup_in_worksheet(target_ws, source_file)
+        ...     print(f"Copied {result.cells_copied} cells")
+    """
+    start_time = time.time()
+    
+    if not xw:
+        return ResourceCopyResult(
+            cells_copied=0,
+            source_range="",
+            target_range="",
+            success=False,
+            error_messages=["xlwings not available"],
+            execution_time=time.time() - start_time
+        )
+    
+    errors = []
+    
+    try:
+        # Get the app from the existing target worksheet
+        app = target_worksheet.book.app
+        
+        source_wb = None
+        
+        try:
+            # Open only the source file (target is already open)
+            source_wb = app.books.open(source_file)
+            source_ws = source_wb.sheets[worksheet_name]
+            
+            # Find source resource data
+            source_range = find_source_resource_data(source_ws, resource_row_count)
+            if not source_range:
+                raise ResourceSetupError(f"No resource data found in source {worksheet_name} worksheet")
+            
+            # Find target editable area in already-open worksheet
+            target_range = find_target_editable_area(target_worksheet, resource_row_count)
+            if not target_range:
+                raise ResourceSetupError(f"No suitable editable area found in target {worksheet_name} worksheet")
+            
+            # Perform the copy operation
+            source_data = source_ws.range(source_range).value
+            if not source_data:
+                raise ResourceSetupError(f"Source range {source_range} contains no data")
+            
+            # Copy data to target worksheet (already open - no need to save here)
+            target_worksheet.range(target_range).value = source_data
+            
+            # Calculate cells copied
+            if isinstance(source_data[0], list):
+                cells_copied = len(source_data) * len(source_data[0])
+            else:
+                cells_copied = len(source_data) if isinstance(source_data, list) else 1
+            
+            execution_time = time.time() - start_time
+            
+            logger.info(f"Successfully copied {cells_copied} cells from {source_range} to {target_range} in existing session")
+            
+            return ResourceCopyResult(
+                cells_copied=cells_copied,
+                source_range=source_range,
+                target_range=target_range,
+                success=True,
+                error_messages=[],
+                execution_time=execution_time
+            )
+            
+        finally:
+            # Clean up - close only the source workbook (target stays open)
+            if source_wb:
+                try:
+                    source_wb.close()
+                except:
+                    pass
+    
+    except ResourceSetupError as e:
+        execution_time = time.time() - start_time
+        return ResourceCopyResult(
+            cells_copied=0,
+            source_range="",
+            target_range="",
+            success=False,
+            error_messages=[str(e)],
+            execution_time=execution_time
+        )
+    except Exception as e:
+        execution_time = time.time() - start_time
+        error_msg = f"Unexpected error during resource setup copy in worksheet: {e}"
+        logger.error(error_msg)
+        
+        return ResourceCopyResult(
+            cells_copied=0,
+            source_range="",
+            target_range="",
+            success=False,
+            error_messages=[error_msg],
+            execution_time=execution_time
+        )

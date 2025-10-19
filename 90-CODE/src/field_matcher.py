@@ -30,9 +30,10 @@ class CellLocation:
     row: int
     column: int
     cell_reference: str  # e.g., "B15"
+    content: str = ""  # The actual text content of the cell
     
     def __str__(self) -> str:
-        return f"Cell {self.cell_reference} (Row {self.row}, Col {self.column})"
+        return f"Cell {self.cell_reference} (Row {self.row}, Col {self.column}): '{self.content}'"
 
 
 @dataclass
@@ -381,4 +382,103 @@ def find_matching_fields_xlwings(source_fields: Dict[str, str], target_file, thr
         return []
     
     logger.info(f"Field matching complete: {len(matches)}/{len(source_fields)} fields matched")
+    return matches
+
+
+def find_matching_fields_in_worksheet(source_fields: Dict[str, str], worksheet, threshold: float = 0.8) -> List[FieldMatch]:
+    """
+    Find matching fields using an already-open xlwings worksheet object.
+    
+    This function works with an existing xlwings worksheet object (part of an already-open workbook)
+    instead of opening files. This enables consolidated Excel operations in a single session.
+    
+    Args:
+        source_fields: Dictionary mapping field names to their values
+        worksheet: xlwings worksheet object (already open)
+        threshold: Minimum confidence level for field matches (0.0-1.0)
+        
+    Returns:
+        List of FieldMatch objects for successfully matched fields
+        
+    Example:
+        >>> with ExcelSessionManager(file_path) as session:
+        ...     worksheet = session.get_worksheet("Pricing Setup")
+        ...     matches = find_matching_fields_in_worksheet(fields, worksheet)
+        ...     print(f"Found {len(matches)} matches")
+    """
+    logger.info("Scanning worksheet for field locations using existing session...")
+    matches = []
+    
+    try:
+        # Scan for potential field locations - optimized batch reading
+        potential_locations = []
+        
+        # Read the entire range at once instead of cell-by-cell (much faster)
+        try:
+            # Read a reasonable scanning area in one batch call
+            range_data = worksheet.range("A1:AX150").value  # Read 150 rows × 50 columns at once
+            
+            # Process the batch data
+            for row_idx, row_data in enumerate(range_data):
+                if row_data is None:
+                    continue
+                for col_idx, cell_value in enumerate(row_data):
+                    if cell_value and isinstance(cell_value, str) and len(cell_value.strip()) > 3:
+                        # Convert to 1-based indexing for consistency
+                        row = row_idx + 1
+                        col = col_idx + 1
+                        cell_ref = f"{chr(64+col)}{row}"  # Convert to A1 notation like "A1", "B5"
+                        potential_locations.append(CellLocation(row, col, cell_ref, cell_value.strip()))
+        
+        except Exception as e:
+            # Fallback to smaller range if the large range fails
+            logger.warning(f"Large range read failed, using fallback: {e}")
+            for row in range(1, 51):  # Smaller fallback range
+                for col in range(1, 21):  # Smaller fallback range
+                    try:
+                        cell_ref = f"{chr(64+col)}{row}"
+                        cell_value = worksheet.range(cell_ref).value
+                        
+                        if cell_value and isinstance(cell_value, str) and len(cell_value.strip()) > 3:
+                            potential_locations.append(CellLocation(row, col, cell_ref, cell_value.strip()))
+                    except Exception:
+                        continue
+        
+        logger.info(f"Found {len(potential_locations)} potential field locations")
+        
+        # Match fields using the same algorithm as the file-based version
+        for source_field, source_value in source_fields.items():
+            best_match = None
+            best_confidence = 0.0
+            
+            for location in potential_locations:
+                try:
+                    confidence = core_string_match(source_field, location.content)
+                    
+                    if confidence >= threshold and confidence > best_confidence:
+                        best_confidence = confidence
+                        best_match = FieldMatch(
+                            source_field=source_field,
+                            target_location=location,
+                            confidence=confidence,
+                            source_value=source_value
+                        )
+                        
+                except Exception as e:
+                    logger.debug(f"Error checking location {location}: {e}")
+                    continue
+            
+            # Add best match if found
+            if best_match:
+                matches.append(best_match)
+                logger.info(f"✅ Match found: '{source_field}' -> {best_match.target_location.cell_reference} "
+                           f"(confidence: {best_confidence:.1%}) [VALUE CELL]")
+            else:
+                logger.warning(f"❌ No match found for: '{source_field}' (threshold: {threshold:.1%})")
+        
+    except Exception as e:
+        logger.error(f"❌ Error scanning worksheet: {e}")
+        return []
+    
+    logger.info(f"Worksheet field matching complete: {len(matches)}/{len(source_fields)} fields matched")
     return matches

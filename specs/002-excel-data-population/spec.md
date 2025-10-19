@@ -1,164 +1,225 @@
-# Feature 002: Excel Data Population from Constants
+# Feature Specification: Excel Data Population from Constants
 
-## Overview
-**Feature ID**: 002-excel-data-population  
-**Dependencies**: Feature 001 (Spreadsheet Copy)  
-**Status**: Specification Phase  
-**Estimated Complexity**: Medium-High  
+**Feature Branch**: `002-excel-data-population`  
+**Created**: 2025-10-12  
+**Status**: Implemented  
+**Input**: User description: "Automatically populate organizational data fields in Excel spreadsheets from a constants file to eliminate manual data entry"
 
-## Business Context
-After Feature 001 creates a new pricing tool spreadsheet, users need to manually populate various fields with standard organizational data. This is repetitive, error-prone, and time-consuming. The data values are consistent across projects and stored in a constants file.
+## User Scenarios & Testing *(mandatory)*
 
-## Functional Requirements
+### User Story 1 - Basic Data Population (Priority: P1)
 
-### FR-001: Constants File Management
-- **Configuration**: Store constants filename as a global constant in main application code
-- **Current File**: `lowcomplexity_const_KHv1.xlsx` in `/00-CONSTANTS/` directory
-- **Structure**: Single sheet, Field names in Column C, Values in Column E
-- **Tab Name**: Must match target file tab name ("Pricing Setup")
-- **Flexibility**: Easy to change filename when constants file is updated
+After creating a new pricing spreadsheet, a consultant needs organizational data automatically populated from a constants file to avoid manual entry of repetitive information.
 
-### FR-002: Data Mapping and Population
-- **Source**: Read data from constants file (`/00-CONSTANTS/lowcomplexity_const_KHv1.xlsx`) Column C (field names) → Column E (values)
-- **Target**: Populate fields in newly copied pricing tool spreadsheet "Pricing Setup" tab
-- **Field Types**: Dropdown selectors and text fields (populate with simple text values)
-- **Mapping Strategy**: Intelligent field matching using fuzzy string comparison
+**Why this priority**: This is the core value proposition - eliminating manual data entry for standard organizational fields that are consistent across projects.
 
-### FR-003: Robust Field Matching
-- **Case Insensitive**: Handle field name variations in case
-- **Core Matching**: Strip first 2 and last 2 characters, match on middle content to handle prefixes/suffixes
-- **Target Search**: Scan entire "Pricing Setup" tab to locate matching field names
-- **Column Flexibility**: Adapt to column position changes in source/target files
-- **Row Flexibility**: Adapt to row position changes in source/target files
-- **Debug Output**: Print matched field snippets for verification
+**Independent Test**: Can be fully tested by running the population after a spreadsheet copy and verifying that fields like "Organisation Name", "Lead Engagement Partner", etc. are correctly populated from the constants file.
 
-### FR-004: Data Fields to Copy
-Based on the provided screenshot, copy the following organizational data:
+**Acceptance Scenarios**:
 
-#### Client Details Section:
-- **Opportunity ID** → Match and populate
-- **Organisation Name** → Match and populate  
-- **Lead Engagement Partner** → Match and populate
-- **Opportunity Owner** → Match and populate
-- **Engagement Manager** → Match and populate
-
-#### Location/Service Details:
-- **Location** → Match and populate
-- **Market Offering** → Match and populate
-- **Service Type** → Match and populate
-- **Estimate Type** → Match and populate
-
-#### Planning Information:
-- **What is the Working Hours Per Day (HPD) assumed for planning the solution and that will be charged to the client?** → Match and populate
-
-#### Technology Questions:
-- **Does the engagement involve technology vendors or Alliances** → Match and populate
-
-## Technical Requirements
-
-### TR-001: Excel File Operations
-- **Library**: Use robust Excel reading library (openpyxl, pandas, or xlwings)
-- **Format Support**: Handle both .xlsx and .xlsb files
-- **Error Handling**: Graceful handling of missing files, sheets, or fields
-- **Performance**: Efficient reading without loading entire workbooks unnecessarily
-
-### TR-002: String Matching Algorithm
-- **Algorithm**: Implement fuzzy string matching focusing on core content (ignoring prefixes/suffixes)
-- **Core Content Strategy**: Strip first 2 and last 2 characters and match on middle portion
-- **Dropdown Compatibility**: Populate dropdown fields with text values (Excel will handle validation)
-- **Tolerance**: Configure similarity threshold for matches
-- **Logging**: Output match confidence and field snippets
-- **Missing File Handling**: Skip data population gracefully if constants file missing
-
-### TR-003: Configuration Management
-- **Constants**: Store constants filename as easily editable global variable
-- **Mapping Config**: Configurable field mapping rules
-- **Extensibility**: Design for easy addition of new data fields
-
-## Non-Functional Requirements
-
-### NFR-001: Reliability
-- **Brittleness Resistance**: Handle structural changes in Excel files
-- **Validation**: Verify data was copied correctly
-- **Backup Strategy**: Preserve original data if copy fails
-
-### NFR-002: Usability
-- **Feedback**: Clear progress indication during data copying
-- **Debugging**: Verbose logging of matching process for troubleshooting
-- **Integration**: Runs automatically immediately after Feature 001 (spreadsheet copy)
-- **Graceful Degradation**: Continue operation if constants file missing (skip data population)
-
-### NFR-003: Maintainability
-- **Modularity**: Separate Excel operations, string matching, and data mapping
-- **Documentation**: Clear documentation of field mapping rules
-- **Testing**: Comprehensive test suite for various Excel file scenarios
-
-## Success Criteria
-1. **Automated Population**: All specified fields automatically populated from constants file
-2. **Robust Matching**: Field matching works despite minor structural changes
-3. **Easy Configuration**: Constants filename easily changeable in main code
-4. **Performance**: Data population completes within 5 seconds
-5. **Error Recovery**: Clear error messages and graceful handling of missing data
-6. **Integration**: Seamless integration with existing spreadsheet copy workflow
-
-## User Stories
-
-### US-001: Data Population
-**As a** consultant setting up pricing tools  
-**I want** organizational data automatically populated from constants  
-**So that** I don't have to manually enter repetitive information  
-
-**Acceptance Criteria**:
-- All organizational fields populated from constants file
-- No manual data entry required for standard fields
-- Process completes automatically after spreadsheet copy
-
-### US-002: Flexible Configuration
-**As a** system administrator  
-**I want** to easily update the constants filename  
-**So that** new constants files can be used without code changes  
-
-**Acceptance Criteria**:
-- Constants filename stored as easily editable global variable
-- Clear documentation on how to update filename
-- System validates constants file exists before processing
-
-### US-003: Robust Operations
-**As a** user with varying Excel file structures  
-**I want** the system to handle minor changes in field names and positions  
-**So that** the tool remains functional despite spreadsheet updates  
-
-**Acceptance Criteria**:
-- Case-insensitive field matching
-- Tolerance for minor field name variations
-- Clear feedback on which fields were successfully matched
-
-## Technical Architecture Overview
-
-### Components:
-1. **Excel Constants Reader**: Read data from constants file
-2. **Field Matcher**: Intelligent string matching for field names
-3. **Data Populator**: Write matched data to target spreadsheet
-4. **Configuration Manager**: Handle constants filename and mapping rules
-5. **Integration Layer**: Connect with existing Feature 001 workflow
-
-### Data Flow:
-1. Feature 001 creates new spreadsheet
-2. **Automatic Trigger**: Feature 002 starts immediately after successful copy
-3. System reads constants file from `/00-CONSTANTS/` (Column C→E mapping)
-4. Field matcher scans "Pricing Setup" tab for matching field names (strip 2 chars each end)
-5. Data populator writes values to matched fields (including dropdowns)
-6. Validation confirms successful data transfer
-7. User receives feedback on populated fields (or skip notification if constants missing)
-
-## Future Considerations
-- Support for multiple constants files
-- User-configurable field mappings
-- Advanced field validation rules
-- Integration with other organizational data sources
-- Audit trail of data population activities
+1. **Given** a constants file exists with organizational data, **When** a new spreadsheet is created, **Then** all matching fields are automatically populated with correct values
+2. **Given** the constants file contains dropdown field values, **When** data is populated, **Then** dropdown fields receive appropriate text values
+3. **Given** organizational data fields exist in the target spreadsheet, **When** population occurs, **Then** user receives confirmation of which fields were successfully populated
 
 ---
-**Document Status**: Draft v1.0  
-**Last Updated**: October 12, 2025  
-**Next Phase**: Planning & Architecture Design
+
+### User Story 2 - Robust Field Matching (Priority: P1)
+
+Users need the system to handle variations in field names and Excel structure changes while maintaining accurate data population.
+
+**Why this priority**: Excel files change over time, and the system must be resilient to minor structural modifications to remain reliable.
+
+**Independent Test**: Can be tested by creating variations of field names (different cases, extra prefixes/suffixes) and verifying the fuzzy matching algorithm still correctly identifies and populates fields.
+
+**Acceptance Scenarios**:
+
+1. **Given** field names have minor variations in case or formatting, **When** matching occurs, **Then** fields are correctly identified using fuzzy matching
+2. **Given** Excel structure changes (row/column positions), **When** scanning occurs, **Then** fields are found regardless of position changes
+3. **Given** field names have prefixes or suffixes, **When** core matching algorithm runs, **Then** fields are matched based on core content
+
+---
+
+### User Story 3 - Configuration Management (Priority: P2)
+
+System administrators need easy configuration management for constants files and field mappings without code modifications.
+
+**Why this priority**: Operational flexibility is important but secondary to core functionality - enables easy maintenance and updates.
+
+**Independent Test**: Can be tested by changing the constants filename configuration and verifying the system uses the new file correctly.
+
+**Acceptance Scenarios**:
+
+1. **Given** a new constants file is available, **When** the filename is updated in configuration, **Then** the system uses the new file for data population
+2. **Given** the constants file is missing, **When** population is attempted, **Then** the system gracefully skips population with appropriate user notification
+3. **Given** field mapping rules need adjustment, **When** configuration is updated, **Then** the new rules are applied correctly
+
+---
+
+### User Story 4 - Error Handling and Validation (Priority: P3)
+
+Users encounter robust error handling and clear feedback when issues occur during data population.
+
+**Why this priority**: Error handling enhances user experience but is not critical for core functionality - helps with troubleshooting and reliability.
+
+**Independent Test**: Can be tested by creating scenarios with missing files, invalid data, or permission issues and verifying appropriate error handling and user feedback.
+
+**Acceptance Scenarios**:
+
+1. **Given** the constants file is corrupted or unreadable, **When** population is attempted, **Then** clear error messages guide the user to resolution
+2. **Given** field matching confidence is low, **When** population occurs, **Then** user receives detailed feedback about match quality and potential issues
+3. **Given** Excel file permissions prevent writing, **When** data population is attempted, **Then** appropriate error handling prevents data corruption
+
+## Technical Requirements *(mandatory)*
+
+### Excel File Operations
+- **Library Support**: Use robust Excel libraries (openpyxl preferred) for reading both .xlsx and .xlsb files
+- **Constants File Reading**: Read field-value mappings from Column C (field names) → Column E (values) in "Pricing Setup" tab
+- **Target File Writing**: Write populated data to matching fields in newly created spreadsheet "Pricing Setup" tab
+- **Format Preservation**: Maintain Excel formatting, dropdown functionality, and cell properties
+
+### Intelligent Field Matching Algorithm
+- **Fuzzy Matching**: Implement core content matching by stripping first 2 and last 2 characters from field names
+- **Case Insensitive**: Handle field name variations in case and formatting
+- **Position Flexibility**: Scan entire worksheet to locate fields regardless of row/column position changes
+- **Confidence Scoring**: Provide match confidence levels and detailed logging for debugging
+
+### Data Population Strategy
+- **Field Type Support**: Handle both text fields and dropdown selectors with appropriate value insertion
+- **Column/Row Adaptation**: Adapt to structural changes in Excel file layout
+- **Priority Handling**: Constants file data takes precedence over any existing values
+- **Validation**: Verify successful data transfer and provide feedback on populated fields
+
+### Configuration and Integration
+- **Constants Filename**: Store as easily configurable global constant (`CONSTANTS_FILENAME = "lowcomplexity_const_KHv1.xlsx"`)
+- **Automatic Integration**: Execute automatically after Feature 001 spreadsheet copy completion
+- **Graceful Degradation**: Skip population if constants file missing, continue with appropriate user notification
+- **Error Recovery**: Comprehensive error handling for missing files, sheets, fields, or permission issues
+
+## Data Model *(mandatory)*
+
+### Core Data Structures
+```python
+@dataclass
+class FieldMapping:
+    source_field_name: str      # From constants file Column C
+    source_value: str           # From constants file Column E
+    target_field_name: str      # Matched field in target spreadsheet
+    match_confidence: float     # Matching algorithm confidence score
+    populated: bool             # Whether value was successfully written
+
+@dataclass
+class ConstantsData:
+    file_path: Path            # Path to constants file
+    field_mappings: Dict[str, str]  # Raw field name → value mappings
+    sheet_name: str            # Target sheet name ("Pricing Setup")
+    
+@dataclass
+class PopulationResult:
+    total_fields_found: int    # Total fields in constants file
+    successful_matches: int    # Fields successfully matched and populated
+    failed_matches: List[str]  # Field names that couldn't be matched
+    errors: List[str]          # Any errors encountered
+    success: bool              # Overall operation success
+```
+
+### Field Data Requirements
+Target organizational data fields to populate:
+- **Client Details**: Opportunity ID, Organisation Name, Lead Engagement Partner, Opportunity Owner, Engagement Manager
+- **Location/Service**: Location, Market Offering, Service Type, Estimate Type  
+- **Planning**: Working Hours Per Day (HPD) assumptions
+- **Technology**: Technology vendors/Alliances involvement
+
+### File System Structure
+- **Constants Directory**: `/00-CONSTANTS/`
+- **Constants File**: Configurable filename (default: `lowcomplexity_const_KHv1.xlsx`)
+- **Target Sheet**: "Pricing Setup" tab in both constants and target files
+- **Mapping Structure**: Column C (field names) → Column E (values)
+
+## Implementation Notes *(mandatory)*
+
+### Architecture Overview
+The implementation extends the modular design established in Feature 001:
+
+- **`excel_constants_reader.py`**: Read field-value mappings from constants file
+- **`field_matcher.py`**: Implement fuzzy matching algorithm for field identification
+- **`excel_data_populator.py`**: Write matched data to target spreadsheet fields
+- **`data_population_orchestrator.py`**: Coordinate the complete population workflow
+
+### Key Implementation Details
+
+#### Fuzzy Matching Algorithm
+```python
+def core_string_match(source_field: str, target_field: str) -> float:
+    """
+    Match fields by comparing core content (strip first/last 2 chars)
+    Returns confidence score 0.0-1.0
+    """
+    source_core = source_field.lower().strip()[2:-2] if len(source_field) > 4 else source_field.lower()
+    target_core = target_field.lower().strip()[2:-2] if len(target_field) > 4 else target_field.lower()
+    
+    # Use similarity algorithm (e.g., difflib.SequenceMatcher)
+    return similarity_score(source_core, target_core)
+```
+
+#### Integration Point
+```python
+# In pricing_tool_accelerator.py
+CONSTANTS_FILENAME = "lowcomplexity_const_KHv1.xlsx"  # Global configuration
+
+def main():
+    # After Feature 001 completion
+    if spreadsheet_copy_success:
+        result = populate_data_from_constants(output_file, CONSTANTS_FILENAME)
+        display_population_feedback(result)
+```
+
+### Dependencies and Libraries
+- **openpyxl**: Primary Excel file manipulation (handles both .xlsx and .xlsb)
+- **difflib**: String similarity matching for fuzzy field matching
+- **pathlib**: File path operations
+- **logging**: Detailed operation logging for debugging
+
+### Error Handling Strategy
+- **Missing Constants File**: Skip population, notify user, continue operation
+- **Excel Permission Issues**: Clear error messages with resolution guidance  
+- **Field Matching Failures**: Log unmatched fields, continue with successful matches
+- **Data Write Failures**: Rollback capability, preserve original data integrity
+
+### Performance Considerations
+- **File Loading**: Load only necessary worksheets, avoid full workbook loading
+- **Memory Usage**: Stream processing for large files when possible
+- **Matching Algorithm**: Optimize for typical field count (10-20 fields)
+- **User Feedback**: Progress indication for operations taking >2 seconds
+
+## Research & External Dependencies *(if applicable)*
+
+### Technical Research Areas
+- **Excel Library Comparison**: Evaluation of openpyxl vs xlwings vs pandas for .xlsb support and performance
+- **String Matching Algorithms**: Analysis of different fuzzy matching approaches for field name variations
+- **Excel Field Type Detection**: Investigation of dropdown vs text field identification and appropriate population methods
+
+### External Dependencies
+- **openpyxl**: Primary dependency for Excel file operations
+- **difflib**: Standard library for string similarity matching
+- **Optional**: xlwings for advanced Excel integration if needed
+
+### Platform Considerations
+- **Cross-platform**: Excel file operations work on Windows, macOS, Linux
+- **Excel Version Compatibility**: Support for Excel 2016+ file formats
+---
+
+## Research & External Dependencies *(if applicable)*
+
+### Technical Research Areas
+- **Excel Library Comparison**: Evaluation of openpyxl vs xlwings vs pandas for .xlsb support and performance
+- **String Matching Algorithms**: Analysis of different fuzzy matching approaches for field name variations
+- **Excel Field Type Detection**: Investigation of dropdown vs text field identification and appropriate population methods
+
+### External Dependencies
+- **openpyxl**: Primary dependency for Excel file operations
+- **difflib**: Standard library for string similarity matching
+- **Optional**: xlwings for advanced Excel integration if needed
+
+### Platform Considerations
+- **Cross-platform**: Excel file operations work on Windows, macOS, Linux
+- **Excel Version Compatibility**: Support for Excel 2016+ file formats

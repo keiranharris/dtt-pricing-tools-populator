@@ -246,9 +246,108 @@ def consolidated_data_population(
     import time
     start_time = time.time()
     
-    logger.info("🚀 Starting consolidated Excel operations (single session)...")
+    logger.info("� Starting consolidated Excel operations (single session)...")
     logger.info(f"   Target file: {target_file.name}")
     logger.info(f"   Operations: Data Population + Resource Setup({enable_resource_setup}) + Rate Card({enable_rate_card})")
+    
+    results = {
+        "data_population": None,
+        "resource_setup": None, 
+        "rate_card": None,
+        "overall_success": False,
+        "execution_time_seconds": 0,
+        "operations_completed": 0,
+        "total_operations": 0,
+        "errors": []
+    }
+    
+    # Count total operations for progress tracking
+    operations = ["Data Population"]
+    if enable_resource_setup:
+        operations.append("Resource Setup")
+    if enable_rate_card and client_margin_decimal is not None:
+        operations.append("Rate Card")
+    
+    results["total_operations"] = len(operations)
+    
+    try:
+        # Single Excel session for all operations
+        with ExcelSessionManager(target_file) as session:
+            
+            # Step 1: Data Population (constants + CLI)
+            logger.info("📋 Step 1: Populating data fields...")
+            try:
+                results["data_population"] = _populate_data_in_session(
+                    session, constants_filename, cli_data, constants_dir_name, field_match_threshold
+                )
+                if results["data_population"].get("success", False):
+                    results["operations_completed"] += 1
+                    logger.info("✅ Data population completed")
+                else:
+                    logger.warning("⚠️ Data population had issues but continuing...")
+            except Exception as e:
+                error_msg = f"Data population failed: {str(e)}"
+                results["errors"].append(error_msg)
+                logger.error(f"❌ {error_msg}")
+            
+            # Step 2: Resource Setup (if enabled)
+            if enable_resource_setup:
+                logger.info("👥 Step 2: Copying resource setup...")
+                try:
+                    results["resource_setup"] = _populate_resource_setup_in_session(
+                        session, constants_filename, constants_dir_name, resource_row_count
+                    )
+                    if results["resource_setup"].get("success", False):
+                        results["operations_completed"] += 1
+                        logger.info("✅ Resource setup completed")
+                    else:
+                        logger.warning("⚠️ Resource setup had issues but continuing...")
+                except Exception as e:
+                    error_msg = f"Resource setup failed: {str(e)}"
+                    results["errors"].append(error_msg)
+                    logger.error(f"❌ {error_msg}")
+            
+            # Step 3: Rate Card Calculation (if enabled and margin provided)
+            if enable_rate_card and client_margin_decimal is not None:
+                logger.info("📊 Step 3: Calculating rate card...")
+                try:
+                    results["rate_card"] = _calculate_rate_card_in_session(
+                        session, client_margin_decimal
+                    )
+                    if results["rate_card"].get("success", False):
+                        results["operations_completed"] += 1 
+                        logger.info("✅ Rate card calculation completed")
+                    else:
+                        logger.warning("⚠️ Rate card calculation had issues but continuing...")
+                except Exception as e:
+                    error_msg = f"Rate card calculation failed: {str(e)}"
+                    results["errors"].append(error_msg)
+                    logger.error(f"❌ {error_msg}")
+            elif enable_rate_card:
+                logger.info("ℹ️ Rate card skipped: no client margin provided")
+            
+            # Final save and success determination
+            if results["operations_completed"] > 0:
+                session.save()  # Ensure all changes are saved
+                results["overall_success"] = True
+                logger.info(f"✅ Consolidated Excel operations completed! ({results['operations_completed']}/{results['total_operations']} operations successful)")
+            else:
+                results["overall_success"] = False
+                logger.error("❌ No operations completed successfully")
+            
+    except ExcelSessionError as e:
+        error_msg = f"Excel session error: {str(e)}"
+        results["errors"].append(error_msg)
+        logger.error(f"❌ {error_msg}")
+    except Exception as e:
+        error_msg = f"Unexpected error in consolidated operations: {str(e)}"
+        results["errors"].append(error_msg)
+        logger.error(f"❌ {error_msg}")
+    
+    results["execution_time_seconds"] = time.time() - start_time
+    logger.info(f"🕒 Total execution time: {results['execution_time_seconds']:.2f} seconds")
+    
+    return results
     
     results = {
         "data_population": None,
@@ -372,19 +471,22 @@ def _populate_data_in_session(
     """
     try:
         # Import modules here to avoid circular imports
-        from excel_constants_reader import read_constants_data
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+        
         from field_matcher import find_matching_fields_in_worksheet
         from excel_data_populator import populate_fields_in_worksheet
         
-        # Read constants data
+        # Read constants data using xlwings (not openpyxl) for consolidated session
         constants_dir = session.file_path.parent.parent / constants_dir_name
-        constants_data = read_constants_data(constants_dir, constants_filename)
+        constants_data = _read_constants_data_xlwings(constants_dir, constants_filename)
         
         # Merge CLI and constants data
         merged_data = {**constants_data, **cli_data} if cli_data else constants_data
         
         if not merged_data:
-            return {"success": False, "error": "No data available for population"}
+            return {"success": False, "error": "No data available for population", "fields_matched": 0}
         
         # Get target worksheet
         worksheet = session.get_worksheet("Pricing Setup")
@@ -419,14 +521,19 @@ def _populate_resource_setup_in_session(
     Args:
         session: Active ExcelSessionManager instance
         constants_filename: Name of constants file
-        constants_dir_name: Constants directory name  
+        constants_dir_name: Constants directory name
         row_count: Number of resource rows to copy
         
     Returns:
         Resource setup results
     """
     try:
-        # Import resource setup module
+        # Import modules here to avoid circular imports
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+        
+        from resource_setup_populator import copy_resource_setup_in_worksheet
         from resource_setup_populator import copy_resource_setup_in_worksheet
         
         # Get both worksheets
@@ -439,20 +546,16 @@ def _populate_resource_setup_in_session(
         if not constants_file.exists():
             return {"success": False, "error": "Constants file not found"}
         
-        # Use temporary session for constants file
-        with ExcelSessionManager(constants_file) as constants_session:
-            constants_worksheet = constants_session.get_worksheet("Resource Setup")
-            
-            # Perform resource copy between worksheets
-            result = copy_resource_setup_in_worksheet(
-                constants_worksheet, target_worksheet, row_count
-            )
-            
-            return {
-                "success": result.get("success", False),
-                "rows_copied": result.get("rows_copied", 0),
-                "errors": result.get("errors", [])
-            }
+        # Use the worksheet-level function correctly
+        result = copy_resource_setup_in_worksheet(
+            target_worksheet, constants_file, row_count
+        )
+        
+        return {
+            "success": result.success,
+            "rows_copied": result.cells_copied,
+            "errors": result.error_messages
+        }
         
     except Exception as e:
         return {"success": False, "error": f"Resource setup error: {str(e)}"}
@@ -473,35 +576,26 @@ def _calculate_rate_card_in_session(
         Rate card calculation results
     """
     try:
-        # Import rate calculation modules
-        from rate_card_calculator import (
-            read_standard_cost_rates_from_worksheet,
-            calculate_engineering_rates,
-            write_engineering_rates_to_worksheet
-        )
+        # Import modules here to avoid circular imports
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+        
+        from excel_rate_integration import calculate_rate_card_in_worksheet
         
         # Get Resource Setup worksheet
         worksheet = session.get_worksheet("Resource Setup")
         
-        # Read standard cost rates from column Q
-        standard_rates = read_standard_cost_rates_from_worksheet(worksheet)
-        
-        if not standard_rates:
-            return {"success": False, "error": "No standard cost rates found"}
-        
-        # Calculate engineering rates
-        calculation_result = calculate_engineering_rates(standard_rates, client_margin_decimal)
-        
-        # Write engineering rates to column O
-        write_result = write_engineering_rates_to_worksheet(worksheet, calculation_result.calculated_rates)
+        # Perform rate card calculation using the new worksheet-level function
+        result = calculate_rate_card_in_worksheet(worksheet, client_margin_decimal)
         
         return {
-            "success": write_result.get("success", False),
-            "client_margin_percent": client_margin_decimal * 100,
-            "standard_rates_found": calculation_result.total_processed,
-            "successful_calculations": calculation_result.successful_calculations,
-            "rates_written": write_result.get("written_count", 0),
-            "errors": write_result.get("errors", [])
+            "success": result.get("success", False),
+            "client_margin_percent": result.get("client_margin_percent", 0),
+            "standard_rates_found": result.get("standard_rates_found", 0),
+            "successful_calculations": result.get("successful_calculations", 0),
+            "rates_written": result.get("rates_written", 0),
+            "errors": result.get("errors", [])
         }
         
     except Exception as e:
@@ -560,3 +654,178 @@ def write_engineering_rates_to_worksheet(worksheet, engineering_rates):
     # Use existing function but adapt for worksheet object  
     # This is a simplified adapter - full implementation would write to worksheet directly
     return {"success": True, "written_count": len(engineering_rates), "errors": []}
+
+
+def _looks_like_field_name(text: str) -> bool:
+    """
+    Helper function to determine if text looks like a field name rather than a value.
+    
+    Args:
+        text: Text to check
+        
+    Returns:
+        True if text looks like a field name, False if it looks like a value
+    """
+    text = text.strip().lower()
+    
+    # Common indicators this is a field name, not a value
+    field_indicators = [
+        text.endswith(':'),
+        text.endswith('*'),
+        'please' in text,
+        'select' in text,
+        'complete' in text,
+        len(text) > 100,  # Very long text (increased from 50) is likely instructions
+        text.startswith('('),  # Instructions in parentheses
+        text.startswith('what is'),  # Question patterns
+        text.startswith('does this'),  # Question patterns
+    ]
+    
+    return any(field_indicators)
+
+
+def _read_constants_data_xlwings(constants_dir: Path, constants_filename: str) -> Dict[str, str]:
+    """
+    Read constants data using xlwings instead of openpyxl.
+    
+    This function is designed for use within consolidated Excel sessions where
+    we want to avoid openpyxl dependency and use xlwings consistently.
+    
+    Args:
+        constants_dir: Directory containing constants file
+        constants_filename: Name of constants Excel file
+        
+    Returns:
+        Dictionary mapping field names to values from constants file
+    """
+    constants_file = constants_dir / constants_filename
+    
+    if not constants_file.exists():
+        logger.warning(f"Constants file not found: {constants_file}")
+        return {}
+    
+    logger.info(f"Reading constants data from: {constants_file}")
+    constants_data = {}
+    
+    try:
+        # Open constants file using xlwings
+        with ExcelSessionManager(constants_file) as constants_session:
+            # Try to get "Pricing Setup" worksheet first (where constants typically are)
+            try:
+                worksheet = constants_session.get_worksheet("Pricing Setup")
+            except:
+                # Fallback to first worksheet
+                worksheet = constants_session.workbook.sheets[0]
+            
+            # Optimized batch reading for constants - read entire area at once
+            # Field keywords for detection
+            field_keywords = [
+                'client', 'opportunity', 'project', 'name', 'date', 'period', 
+                'location', 'type', 'partner', 'manager', 'owner', 'service',
+                'market', 'offering', 'engagement', 'lead', 'estimate',
+                'delivery', 'solution', 'practice', 'capability', 'area'
+            ]
+            
+            try:
+                # Read entire constants area in one batch call (much faster than 1000+ individual calls)
+                range_data = worksheet.range("A1:L101").value  # Read 101 rows × 12 columns to include adjacent value cells
+                
+                # Process the batch data to find field-value pairs
+                for row_idx, row_data in enumerate(range_data):
+                    if row_data is None:
+                        continue
+                    
+                    for col_idx in range(len(row_data) - 2):  # Leave room to check right cells
+                        cell_value = row_data[col_idx]
+                        
+                        # Skip empty cells
+                        if not cell_value or not isinstance(cell_value, str):
+                            continue
+                        
+                        cell_value = cell_value.strip()
+                        
+                        # Clean field name by removing asterisks and extra whitespace
+                        clean_field_name = cell_value.rstrip('*').strip()
+                        
+                        # Check if this looks like a field name
+                        is_field_name = (len(clean_field_name) > 3 and 
+                                       any(keyword in clean_field_name.lower() for keyword in field_keywords))
+                        
+                        if is_field_name:
+                            # Try multiple strategies to find the associated value using batch data
+                            value_found = False
+                            row = row_idx + 1  # Convert to 1-based for logging
+                            col = col_idx + 1  # Convert to 1-based for logging
+                            
+                            # Strategy 1: Check right cell (most common pattern)
+                            if col_idx + 1 < len(row_data):
+                                right_value = row_data[col_idx + 1]
+                                if (right_value and isinstance(right_value, str) and 
+                                    len(right_value.strip()) > 0 and 
+                                    not _looks_like_field_name(right_value)):
+                                    
+                                    constants_data[clean_field_name] = right_value.strip()
+                                    logger.info(f"Found constant (right): '{clean_field_name}' = '{right_value.strip()}' ({chr(64+col)}{row} -> {chr(64+col+1)}{row})")
+                                    value_found = True
+                            
+                            # Strategy 2: Check below cell if right didn't work
+                            if not value_found and row_idx + 1 < len(range_data):
+                                below_row_data = range_data[row_idx + 1]
+                                if below_row_data and col_idx < len(below_row_data):
+                                    below_value = below_row_data[col_idx]
+                                    if (below_value and isinstance(below_value, str) and 
+                                        len(below_value.strip()) > 0 and 
+                                        not _looks_like_field_name(below_value)):
+                                        
+                                        constants_data[clean_field_name] = below_value.strip()
+                                        logger.info(f"Found constant (below): '{clean_field_name}' = '{below_value.strip()}' ({chr(64+col)}{row} -> {chr(64+col)}{row+1})")
+                                        value_found = True
+                            
+                            # Strategy 3: Check two cells right
+                            if not value_found and col_idx + 2 < len(row_data):
+                                far_right_value = row_data[col_idx + 2]
+                                if (far_right_value and isinstance(far_right_value, str) and 
+                                    len(far_right_value.strip()) > 0 and 
+                                    not _looks_like_field_name(far_right_value)):
+                                    
+                                    constants_data[clean_field_name] = far_right_value.strip()
+                                    logger.info(f"Found constant (far right): '{clean_field_name}' = '{far_right_value.strip()}' ({chr(64+col)}{row} -> {chr(64+col+2)}{row})")
+                
+            except Exception as e:
+                logger.warning(f"Batch constants reading failed, using fallback: {e}")
+                # Fallback to original method if batch fails
+                for row in range(1, 51):  # Smaller fallback range
+                    for col in range(1, 11):
+                        try:
+                            cell_ref = f"{chr(64+col)}{row}"
+                            cell_value = worksheet.range(cell_ref).value
+                            
+                            if not cell_value or not isinstance(cell_value, str):
+                                continue
+                                
+                            clean_field_name = cell_value.strip().rstrip('*').strip()
+                            is_field_name = (len(clean_field_name) > 3 and 
+                                           any(keyword in clean_field_name.lower() for keyword in field_keywords))
+                            
+                            if is_field_name:
+                                # Try right cell only in fallback
+                                right_cell_ref = f"{chr(64+col+1)}{row}"
+                                try:
+                                    right_value = worksheet.range(right_cell_ref).value
+                                    if (right_value and isinstance(right_value, str) and 
+                                        len(right_value.strip()) > 0 and 
+                                        not _looks_like_field_name(right_value)):
+                                        
+                                        constants_data[clean_field_name] = right_value.strip()
+                                        logger.info(f"Found constant (fallback): '{clean_field_name}' = '{right_value.strip()}'")
+                                except:
+                                    pass
+                        except Exception:
+                            continue
+        
+        logger.info(f"Loaded {len(constants_data)} constants from {constants_filename}")
+        return constants_data
+        
+    except Exception as e:
+        logger.error(f"Error reading constants file {constants_file}: {e}")
+        return {}

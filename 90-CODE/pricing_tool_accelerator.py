@@ -135,10 +135,7 @@ def main() -> None:
             print("   (This may trigger permission dialogs - please allow access)")
         
         try:
-            # Try consolidated Excel session approach first (single open/close)
-            print("⚡ Using optimized single-session Excel workflow...")
-            print("   (This eliminates multiple permission dialogs!)")
-            
+            # Try consolidated Excel session approach first with automatic fallback
             population_summary = populate_spreadsheet_data_consolidated_session(
                 final_output_path, 
                 CONSTANTS_FILENAME,

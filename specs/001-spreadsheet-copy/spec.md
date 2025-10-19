@@ -1,109 +1,156 @@
 # Feature Specification: Spreadsheet Copy and Instantiation
 
-**Feature ID**: `001-spreadsheet-copy`  
-**Branch**: `001-spreadsheet-copy`  
-**Date**: 2025-10-12  
-**Status**: Specification  
+**Feature Branch**: `001-spreadsheet-copy`  
+**Created**: 2025-10-12  
+**Status**: Implemented  
+**Input**: User description: "Automate the weekly task of copying and renaming Excel templates from source directory to output directory with proper naming conventions"
 
-## Problem Statement
+## User Scenarios & Testing *(mandatory)*
 
-Weekly administrative tasks require manual copying and renaming of Excel files from a template directory to an output directory. This repetitive process involves:
+### User Story 1 - Basic Template Copy (Priority: P1)
 
-1. Locating the correct template file (Low Complexity pricing tool)
-2. Copying it to the output directory
-3. Renaming it with current date and client-specific information
-4. Manual typing prone to errors and inconsistency
+A consultant needs to quickly create a new pricing spreadsheet for a client project by copying the standard Low Complexity template with proper naming conventions.
 
-This manual process occurs multiple times per week and represents inefficient use of time.
+**Why this priority**: This is the core functionality that eliminates the manual file copying process and provides immediate value to users.
 
-## Feature Overview
+**Independent Test**: Can be fully tested by running the CLI command, providing client and gig names, and verifying a properly named file is created in the output directory with Finder integration.
 
-Create an automated system that copies the Low Complexity Excel template from the source directory (`/10-LATEST-PRICING-TOOLS/`) to the output directory (`/20-OUTPUT/`) with proper naming convention based on user-provided client information.
+**Acceptance Scenarios**:
 
-## Functional Requirements
+1. **Given** the Low Complexity template exists in `/10-LATEST-PRICING-TOOLS/`, **When** user runs the command and provides "Acme Corp" and "Digital Transformation", **Then** a file named "YYYYMMDD - Acme Corp - Digital Transformation (LowCompV1.2).xlsb" is created in `/20-OUTPUT/`
+2. **Given** a file already exists with the same name, **When** user creates another file with identical inputs, **Then** the system appends a timestamp to prevent overwriting
+3. **Given** user provides input with special characters, **When** the system processes the input, **Then** special characters are sanitized while preserving readable text
 
-### Primary Function
-- **Source File**: Locate and copy the Excel file containing "Low Complexity" in filename from `/10-LATEST-PRICING-TOOLS/`
-- **Destination**: Copy to `/20-OUTPUT/` directory
-- **Naming Convention**: `YYYYMMDD - <ClientName> - <GigName> (LowComp<VersionFromSource>).xlsb`
+---
 
-### User Interface Requirements
-- **CLI Input**: Prompt user for two text inputs:
-  1. `ClientName`: Name of the client (text input, special characters will be stripped)
-  2. `GigName`: Name of the engagement/project (text input, special characters will be stripped)
-- **Date Handling**: Automatically use current date in YYYYMMDD format
-- **File Format**: Keep original `.xlsb` format (no conversion needed)
-- **Version Extraction**: Extract version number from source filename (e.g., "v1.2" → "V1.2")
+### User Story 2 - Error Handling and Edge Cases (Priority: P2)
 
-### Validation Requirements
-- **Source File Existence**: Verify source file exists before attempting copy
-- **Destination Directory**: Ensure `/20-OUTPUT/` directory exists (create if needed)
-- **Input Validation**: Ensure ClientName and GigName are provided (non-empty strings)
-- **Filename Safety**: Strip special characters from user input (keep only alphanumeric, spaces, hyphens)
-- **File Collision**: Auto-append timestamp if destination file already exists
-- **Version Parsing**: Extract version number from source filename using regex pattern
+Users encounter various error conditions gracefully with clear guidance on how to resolve issues.
 
-## Technical Requirements
+**Why this priority**: Robust error handling ensures the tool is reliable and user-friendly even when things go wrong.
 
-### File Operations
-- **Copy Operation**: Use Python's file copy functionality (not move - preserve original)
-- **Format Preservation**: Keep original `.xlsb` format (supports programmatic data input)
-- **Error Handling**: Graceful handling of file permission issues, disk space, etc.
-- **File Opening**: Open destination folder in Finder with new file selected after successful copy
+**Independent Test**: Can be tested by creating scenarios with missing files, invalid permissions, or empty inputs and verifying appropriate error messages.
 
-### Input Processing
-- **CLI Interface**: Clean command-line prompts with clear instructions
-- **Input Sanitization**: Strip special characters, keep only alphanumeric, spaces, and hyphens
-- **Case Handling**: Preserve user input case for client/gig names
-- **Version Parsing**: Use regex to extract version (e.g., "v1.2", "v1.3") from source filename
-- **Collision Handling**: Append timestamp (HHMMSS) if destination file exists
+**Acceptance Scenarios**:
 
-### Code Structure (Per Constitution)
-- **Atomic Functions**: Separate functions for file discovery, copying, renaming, and CLI input
-- **Type Hints**: All functions must include proper type annotations
-- **Documentation**: Comprehensive docstrings following Python standards
-- **Error Messages**: Clear, actionable error messages for users
+1. **Given** the source template file is missing, **When** user runs the command, **Then** system displays clear error explaining which file was expected and where
+2. **Given** the output directory is not writable, **When** user attempts to create a file, **Then** system provides permission error with guidance
+3. **Given** user provides empty input for client name, **When** prompted, **Then** system re-prompts for valid input
 
-## Expected Behavior
+---
 
-### Success Case
+### User Story 3 - Version Extraction and File Integration (Priority: P3)
+
+The system automatically extracts version information from the source template and integrates with the operating system for improved user experience.
+
+**Why this priority**: These features enhance usability but are not critical for core functionality.
+
+**Independent Test**: Can be tested by verifying version numbers are correctly extracted from filenames and Finder opens with the new file selected.
+
+**Acceptance Scenarios**:
+
+1. **Given** source file contains version "v1.2", **When** file is copied, **Then** output filename includes "LowCompV1.2"
+2. **Given** file copy is successful, **When** operation completes, **Then** Finder opens with the new file selected for immediate access
+
+## Technical Requirements *(mandatory)*
+
+### File Operations & Data Processing
+- **Source File Discovery**: Automatically locate Excel file containing "Low Complexity" in filename from `/10-LATEST-PRICING-TOOLS/`
+- **File Format Preservation**: Maintain original `.xlsb` format for programmatic compatibility
+- **Version Extraction**: Use regex pattern to extract version numbers (e.g., "v1.2" → "V1.2") from source filenames
+- **Copy Operations**: Use Python's `shutil.copy2` for metadata preservation without modifying original files
+
+### User Interface & Input Processing
+- **CLI Interface**: Prompt for client name and gig name with clear instructions
+- **Input Sanitization**: Strip special characters while preserving alphanumeric, spaces, and hyphens
+- **Date Handling**: Automatically generate current date in YYYYMMDD format
+- **Naming Convention**: Generate filenames as "YYYYMMDD - <ClientName> - <GigName> (LowComp<Version>).xlsb"
+
+### System Integration & Error Handling
+- **File Collision Resolution**: Auto-append timestamp (HHMMSS) if destination file already exists
+- **Directory Management**: Ensure output directory exists, create if necessary
+- **Finder Integration**: Open destination folder with new file selected (macOS-specific)
+- **Validation**: Verify source file existence, output directory writability, and input completeness
+
+### Code Architecture (Constitution Compliance)
+- **Atomic Functions**: Separate functions for file discovery, copying, naming, and CLI input
+- **Type Hints**: Comprehensive type annotations for all function parameters and returns
+- **Documentation**: Detailed docstrings following Python standards
+- **Error Messages**: Clear, actionable feedback for users in all error scenarios
+
+## Data Model *(mandatory)*
+
+### Input Data Structure
+```python
+@dataclass
+class UserInput:
+    client_name: str        # User-provided client name
+    gig_name: str          # User-provided project/engagement name
+    
+@dataclass
+class SourceFile:
+    path: Path             # Full path to source template file
+    version: str           # Extracted version (e.g., "V1.2")
+    original_name: str     # Original filename
 ```
-$ python pricing_tool_accelerator.py
-Enter Client Name: Acme Corp
-Enter Gig Name: Digital Transformation
-✓ Successfully created: 20251012 - Acme Corp - Digital Transformation (LowCompV1.2).xlsb
-✓ Opening folder with file selected...
+
+### Output Data Structure
+```python
+@dataclass
+class OutputFile:
+    path: Path             # Full path to created file
+    filename: str          # Generated filename
+    timestamp: str         # Creation timestamp (if collision occurred)
+    success: bool          # Operation success status
 ```
 
-### Error Cases
-- Source file not found → Clear error message explaining which file was expected
-- Destination directory not writable → Permission error with guidance
-- Empty input → Re-prompt for valid input
-- File already exists → Auto-append timestamp (HHMMSS) to filename
-- Version not parseable → Error with explanation of expected format
+### File System Paths
+- **Source Directory**: `/10-LATEST-PRICING-TOOLS/`
+- **Destination Directory**: `/20-OUTPUT/`
+- **Template Pattern**: Files containing "Low Complexity" in name
+- **Output Pattern**: "YYYYMMDD - <Client> - <Gig> (LowComp<Version>).xlsb"
 
-## File Mapping
+## Implementation Notes *(mandatory)*
 
-### Input
-- **Source**: `/10-LATEST-PRICING-TOOLS/FY26 Low Complexity Pricing Tool v1.2.xlsb`
+### Architecture Overview
+The implementation follows a modular design with atomic functions organized across specialized modules:
 
-### Output  
-- **Destination**: `/20-OUTPUT/YYYYMMDD - <ClientName> - <GigName> (LowComp<VersionFromSource>).xlsb`
-- **Example**: `/20-OUTPUT/20251012 - Acme Corp - Digital Transformation (LowCompV1.2).xlsb`
-- **Collision Example**: `/20-OUTPUT/20251012 - Acme Corp - Digital Transformation (LowCompV1.2)_143022.xlsb`
+- **`file_operations.py`**: Source discovery, version parsing, file copying operations
+- **`cli_interface.py`**: User input collection, validation, and sanitization
+- **`naming_utils.py`**: Filename generation, collision resolution, character sanitization
+- **`system_integration.py`**: Finder integration and OS-specific operations
 
-## Acceptance Criteria
+### Key Implementation Details
+1. **Version Extraction**: Uses regex pattern `r'v(\d+\.\d+)'` to extract version numbers
+2. **Input Sanitization**: Removes special characters while preserving readability
+3. **Collision Handling**: Appends timestamp in format `_HHMMSS` when files already exist
+4. **Error Recovery**: Comprehensive error handling with user-friendly messages
 
-1. **Source File Discovery**: ✓ Automatically finds file with "Low Complexity" in name
-2. **Version Extraction**: ✓ Extracts version number from source filename (e.g., "v1.2" → "V1.2")
-3. **User Input Collection**: ✓ Prompts for and collects ClientName and GigName via CLI
-4. **Input Sanitization**: ✓ Strips special characters from user input
-5. **File Copy**: ✓ Successfully copies source file to destination with correct naming
-6. **Date Formatting**: ✓ Uses current date in YYYYMMDD format
-7. **Collision Handling**: ✓ Auto-appends timestamp if destination file exists
-8. **Folder Opening**: ✓ Opens destination folder in Finder with new file selected
-9. **Error Handling**: ✓ Handles missing source file, permission errors, invalid input
-10. **Code Quality**: ✓ Follows constitution principles (atomic functions, type hints, documentation)
+### Dependencies
+- **Python Standard Library Only**: No external dependencies required
+- **macOS Integration**: Uses `subprocess` with `open -R` command for Finder integration
+- **File Operations**: `shutil.copy2`, `pathlib.Path`, `re` for core functionality
+
+### Testing Strategy
+- **Unit Tests**: Individual function testing with mock file operations
+- **Integration Tests**: End-to-end workflow testing with temporary directories
+- **Error Scenario Testing**: Validation of error handling for missing files, permissions, invalid input
+---
+
+## Research & External Dependencies *(if applicable)*
+
+### Technical Research Areas
+- **File Operations**: Investigation of Python's `shutil.copy2` vs `shutil.copy` for metadata preservation
+- **Regex Patterns**: Development of version extraction patterns for various filename formats
+- **macOS Integration**: Validation of `open -R` command for Finder integration
+- **File Format Support**: Verification of .xlsb file integrity after copy operations
+
+### External Dependencies
+None - Uses Python standard library only for maximum compatibility and simplicity.
+
+### Platform Considerations
+- **Primary Target**: macOS (for Finder integration)
+- **Future Compatibility**: Code structure allows for cross-platform adaptation
 
 ## Success Metrics
 

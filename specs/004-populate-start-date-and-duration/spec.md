@@ -1,17 +1,114 @@
-# Feature 004: Populate Start Date and Duration - Specification
+# Feature Specification: Populate Start Date and Duration
 
-## Overview
-**Feature Title**: 004-populate-start-date-and-duration  
-**Branch**: 004-populate-start-date-and-duration  
-**Priority**: Medium  
-**Estimated Complexity**: Low  
-**Dependencies**: Feature 003 (CLI Field Population)  
+**Feature Branch**: `004-populate-start-date-and-duration`  
+**Created**: 2025-10-12  
+**Status**: Implemented  
+**Input**: User description: "Extend CLI field collection to include project timing fields (start date, duration) with intelligent defaults and validation"
 
-## Problem Statement
-The pricing tool currently prompts for "Client Name" and "Opportunity Name" but lacks essential project timing fields that are critical for project planning and scheduling. Users must manually enter start dates and project duration after spreadsheet creation, leading to inefficiency and potential errors.
+## User Scenarios & Testing *(mandatory)*
 
-## Objective
-Extend the existing CLI field collection system to include project timing fields with intelligent defaults, leveraging the extensible CLI_FIELDS_CONFIG architecture established in Feature 003.
+### User Story 1 - Project Timing Collection (Priority: P1)
+
+Users need to provide project start date and duration through CLI with intelligent defaults to support project planning and scheduling.
+
+**Why this priority**: Project timing is essential for pricing calculations and project planning - must be collected upfront.
+
+**Independent Test**: Can be tested by running CLI and verifying start date defaults to 4 weeks from now (Monday) and duration accepts integer weeks.
+
+**Acceptance Scenarios**:
+
+1. **Given** current date is any day, **When** CLI prompts for start date, **Then** default is Monday of 4th week from now
+2. **Given** user provides duration in weeks, **When** validation occurs, **Then** only positive integers 1-52 are accepted
+3. **Given** user provides start date and duration, **When** population occurs, **Then** both fields are populated in Excel using fuzzy matching
+
+---
+
+### User Story 2 - Date Calculation and Validation (Priority: P2)
+
+The system provides intelligent date defaults and robust validation for user convenience and data quality.
+
+**Why this priority**: Automation and validation reduce user errors and improve experience, but core functionality works without them.
+
+**Independent Test**: Can be tested by verifying date calculations are correct, business day adjustment works, and validation rejects invalid inputs.
+
+**Acceptance Scenarios**:
+
+1. **Given** calculated start date falls on weekend, **When** default is shown, **Then** date is adjusted to next Monday
+2. **Given** user enters invalid date format, **When** validation runs, **Then** clear error message prompts for correct format
+3. **Given** duration exceeds 52 weeks, **When** validation runs, **Then** error explains maximum project duration limit
+
+## Technical Requirements *(mandatory)*
+
+### Date Handling and Calculation
+- **Default Calculation**: Current date + 4 weeks, adjusted to next business day (Monday-Friday)
+- **Format Support**: DD/MM/YY input format with flexible parsing (DD-MM-YY, DD.MM.YY accepted)
+- **Year Inference**: Two-digit years (25 = 2025), handle century boundaries appropriately
+- **Business Day Logic**: Skip weekends, adjust to next Monday if calculated date falls on weekend
+
+### Duration Validation and Processing
+- **Input Format**: Integer weeks only, no decimals or fractions
+- **Range Validation**: 1-52 weeks (maximum 1 year project duration)
+- **Input Sanitization**: Remove non-numeric characters, validate integer conversion
+- **Error Messages**: Clear feedback with examples for invalid inputs
+
+### CLI Configuration Extension
+- **Architecture**: Extend existing CLI_FIELDS_CONFIG from Feature 003
+- **Field Mapping**: "Start Date (DD/MM/YY)" and "No of Periods (in Weeks)" exact Excel field matches
+- **Integration**: Seamless addition to existing CLI field collection workflow
+
+## Data Model *(mandatory)*
+
+### Extended CLI Configuration
+```python
+CLI_FIELDS_CONFIG.update({
+    "start_date": {
+        "prompt": "Start Date (DD/MM/YY)",
+        "excel_field_pattern": "Start Date (DD/MM/YY)",
+        "required": True,
+        "default_calculator": calculate_default_start_date,
+        "validator": validate_date_format
+    },
+    "duration_weeks": {
+        "prompt": "No of Periods (in Weeks)",
+        "excel_field_pattern": "No of Periods (in Weeks)",
+        "required": True,
+        "validator": validate_duration_weeks
+    }
+})
+```
+
+### Date Processing Functions
+```python
+def calculate_default_start_date() -> str:
+    """Calculate Monday of 4th week from now"""
+    base_date = datetime.now() + timedelta(weeks=4)
+    # Adjust to next Monday if needed
+    days_ahead = 0 - base_date.weekday()  # Monday = 0
+    if days_ahead <= 0:
+        days_ahead += 7
+    monday = base_date + timedelta(days=days_ahead)
+    return monday.strftime("%d/%m/%y")
+
+def validate_duration_weeks(value: str) -> bool:
+    """Validate duration is integer 1-52"""
+    try:
+        weeks = int(value.strip())
+        return 1 <= weeks <= 52
+    except ValueError:
+        return False
+```
+
+## Implementation Notes *(mandatory)*
+
+### Architecture Integration
+- **Module Extension**: Extend existing CLI interface module, no new modules required
+- **Date Library**: Use Python `datetime` module for reliable date calculations and validation
+- **Configuration Driven**: New fields added through configuration, core logic unchanged
+
+### Business Logic
+- **Default Display**: Show calculated default with explanation: "Default: 15/11/25 (Monday - 4 weeks from now)"
+- **User Override**: Allow user to override default or press Enter to accept
+- **Validation Loop**: Re-prompt with clear error messages for invalid inputs
 
 ## Requirements
 

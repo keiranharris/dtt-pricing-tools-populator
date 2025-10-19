@@ -13,6 +13,7 @@ import re
 from typing import Optional, Union
 
 from naming_utils import sanitize_user_input
+from margin_validator import validate_margin_input, get_margin_prompt_text, get_margin_error_help
 
 # Feature 004: Date calculation functions
 def calculate_default_start_date() -> str:
@@ -314,3 +315,51 @@ def collect_user_inputs() -> tuple[str, str]:
     """
     cli_data = collect_cli_fields()
     return cli_data["Client Name"], cli_data["Opportunity Name"]
+
+
+def collect_margin_percentage() -> float:
+    """
+    Collect client margin percentage from user with validation and retry logic.
+    
+    Prompts user for margin percentage (35-65%) with validation loop.
+    Continues prompting until valid input is provided.
+    
+    Returns:
+        Validated margin percentage as decimal (e.g., 0.45 for 45%)
+        
+    Example:
+        >>> margin = collect_margin_percentage()
+        Enter client margin percentage (35-65%):
+          Examples: 45, 45%, 42.5, 42.5%
+          Range: 35% to 65% inclusive
+        Margin: 45%
+        >>> print(margin)  # 0.45
+    """
+    print("\n📊 Client Margin Configuration")
+    print("=" * 40)
+    
+    while True:
+        try:
+            # Get user input
+            user_input = input(get_margin_prompt_text()).strip()
+            
+            # Validate input
+            result = validate_margin_input(user_input)
+            
+            if result.is_valid:
+                # Success - show confirmation and return
+                margin_pct = result.decimal_value * 100
+                print(f"✅ Confirmed: {margin_pct:.1f}% client margin")
+                return result.decimal_value
+            else:
+                # Invalid input - show error and retry
+                print(get_margin_error_help())
+                print(f"🔄 Please try again...")
+                
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Operation cancelled by user")
+            raise
+        except Exception as e:
+            print(f"\n❌ Unexpected error: {e}")
+            print("🔄 Please try again...")
+            continue

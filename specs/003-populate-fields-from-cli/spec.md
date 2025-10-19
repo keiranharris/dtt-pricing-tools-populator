@@ -1,17 +1,91 @@
-# Feature 003: Populate Fields from CLI - Specification
+# Feature Specification: Populate Fields from CLI
 
-## Overview
-**Feature Title**: 003-populate-fields-from-cli  
-**Branch**: 003-populate-fields-from-cli  
-**Priority**: High  
-**Estimated Complexity**: Low-Medium  
-**Dependencies**: Feature 002 (Excel Data Population)  
+**Feature Branch**: `003-populate-fields-from-cli`  
+**Created**: 2025-10-12  
+**Status**: Implemented  
+**Input**: User description: "Integrate CLI-collected user inputs (client name, opportunity name) into Excel spreadsheet population using the same fuzzy matching logic"
 
-## Problem Statement
-Currently, the system prompts users for "Client Name" and "Gig Name" at CLI time but does not populate these values into the Excel spreadsheet fields. The CLI terminology ("Client", "Gig") is also inconsistent with the actual Excel field names which are "Client Name" and "Opportunity Name".
+## User Scenarios & Testing *(mandatory)*
 
-## Objective
-Extend the existing data population system to include CLI-collected user inputs alongside the constants file data, ensuring proper field name alignment and using the same fuzzy matching logic.
+### User Story 1 - CLI Data Integration (Priority: P1)
+
+Users need their CLI-provided client and opportunity names automatically populated into the corresponding Excel fields, eliminating duplicate data entry.
+
+**Why this priority**: This closes the loop between CLI input and spreadsheet population, ensuring no manual re-entry of information already provided.
+
+**Independent Test**: Can be tested by providing CLI inputs and verifying they appear correctly in the Excel spreadsheet fields using the same matching algorithm as constants data.
+
+**Acceptance Scenarios**:
+
+1. **Given** user provides "Acme Corporation" as client name, **When** population occurs, **Then** Excel field "Client Name" is populated with "Acme Corporation"
+2. **Given** user provides "Digital Transformation" as opportunity name, **When** population occurs, **Then** Excel field "Opportunity Name" is populated with "Digital Transformation"
+3. **Given** CLI data conflicts with constants data, **When** population occurs, **Then** CLI data takes precedence
+
+---
+
+### User Story 2 - Terminology Alignment (Priority: P2)
+
+The CLI prompts should use terminology consistent with Excel field names for user clarity and system consistency.
+
+**Why this priority**: Consistent terminology reduces user confusion and improves system usability.
+
+**Independent Test**: Can be tested by verifying CLI prompts match Excel field terminology and that the mapping works correctly.
+
+**Acceptance Scenarios**:
+
+1. **Given** CLI prompts for "Client Name" and "Opportunity Name", **When** user provides input, **Then** terminology matches Excel field names exactly
+2. **Given** field matching occurs, **When** CLI fields are processed, **Then** they use the same fuzzy matching logic as constants fields
+
+## Technical Requirements *(mandatory)*
+
+### CLI Integration Architecture
+- **Extension Point**: Extend existing `CLI_FIELDS_CONFIG` from Feature 002 infrastructure
+- **Data Priority**: CLI values override constants file values for matching fields  
+- **Field Collection**: Integrate CLI fields into existing field population workflow
+- **Validation**: Apply same input sanitization used in Feature 001
+
+### Field Mapping Strategy
+- **Fuzzy Matching**: Use identical matching algorithm as Feature 002 (core content stripping)
+- **Confidence Threshold**: Apply same 80% confidence threshold for automatic population
+- **Target Fields**: Map "Client Name" → Excel "Client Name", "Opportunity Name" → Excel "Opportunity Name"
+- **Error Handling**: Graceful degradation if CLI fields not found in Excel
+
+## Data Model *(mandatory)*
+
+### CLI Field Configuration
+```python
+CLI_FIELDS_CONFIG = {
+    "client_name": {
+        "prompt": "Client Name",
+        "excel_field_pattern": "Client Name",
+        "required": True,
+        "max_length": 50
+    },
+    "opportunity_name": {
+        "prompt": "Opportunity Name", 
+        "excel_field_pattern": "Opportunity Name",
+        "required": True,
+        "max_length": 50
+    }
+}
+```
+
+### Integration Data Flow
+```
+CLI Input → UserInput → Field Mapping Dictionary → Population Pipeline → Excel Fields
+```
+
+## Implementation Notes *(mandatory)*
+
+### Architecture Integration
+- **No New Modules**: Leverage existing Feature 002 field matching and population modules
+- **Configuration Extension**: Add CLI fields to existing field mapping configuration
+- **Priority Handling**: CLI data processed before constants data, takes precedence on conflicts
+
+### Backward Compatibility
+- **Constants File**: All existing Feature 002 functionality preserved
+- **Field Population**: Existing field population workflow unchanged
+- **Error Handling**: Graceful degradation maintains existing behavior
 
 ## Requirements
 

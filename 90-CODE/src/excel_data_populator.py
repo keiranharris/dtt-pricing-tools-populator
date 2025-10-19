@@ -328,3 +328,91 @@ def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]
     
     logger.info(f"Population complete: {result}")
     return result
+
+
+def populate_fields_in_worksheet(worksheet, matches: List[FieldMatch]) -> PopulationResult:
+    """
+    Populate matched fields using an already-open xlwings worksheet object.
+    
+    This function works with an existing xlwings worksheet object (part of an already-open workbook)
+    instead of opening files. This enables consolidated Excel operations in a single session.
+    
+    Args:
+        worksheet: xlwings worksheet object (already open)
+        matches: List of field matches to populate
+        
+    Returns:
+        PopulationResult with success/failure statistics
+        
+    Example:
+        >>> with ExcelSessionManager(file_path) as session:
+        ...     worksheet = session.get_worksheet("Pricing Setup")
+        ...     result = populate_fields_in_worksheet(worksheet, matches)
+        ...     print(f"Success rate: {result.success_rate:.1f}%")
+    """
+    logger.info(f"Populating {len(matches)} fields in existing worksheet session...")
+    
+    successful_fields = 0
+    failed_fields = 0 
+    error_messages = []
+    populated_fields = []
+    
+    try:
+        # Populate each matched field
+        for match in matches:
+            try:
+                logger.info(f"Populating: {match.source_field} -> {match.target_location.cell_reference}")
+                logger.info(f"Writing value: '{match.source_value}' to cell {match.target_location.cell_reference}")
+                
+                # Adjust target cell: if we matched a label cell (E column), write to value cell (F column)
+                target_cell_ref = match.target_location.cell_reference
+                if target_cell_ref.startswith('E'):
+                    # Convert E16 -> F16, E17 -> F17, etc.
+                    target_cell_ref = 'F' + target_cell_ref[1:]
+                    logger.info(f"Adjusting target cell from {match.target_location.cell_reference} to {target_cell_ref}")
+                
+                # Get the target cell and set the value
+                target_cell = worksheet.range(target_cell_ref)
+                
+                # Debug: Check current cell value
+                current_value = target_cell.value
+                logger.info(f"Current cell value: '{current_value}'")
+                
+                # Set the new value
+                target_cell.value = match.source_value
+                
+                # Verify the value was set
+                new_value = target_cell.value
+                logger.info(f"New cell value after write: '{new_value}'")
+                
+                if str(new_value) == str(match.source_value):
+                    successful_fields += 1
+                    populated_fields.append(match.source_field)
+                    logger.info(f"✅ Successfully wrote '{match.source_value}' to {target_cell_ref}")
+                else:
+                    logger.warning(f"❌ Value verification failed for {target_cell_ref}")
+                    failed_fields += 1
+                
+            except Exception as e:
+                error_msg = f"Failed to populate {match.source_field}: {e}"
+                logger.error(f"❌ {error_msg}")
+                error_messages.append(error_msg)
+                failed_fields += 1
+        
+    except Exception as e:
+        error_msg = f"Failed to populate worksheet: {e}"
+        logger.error(f"❌ {error_msg}")
+        error_messages.append(error_msg)
+        failed_fields = len(matches)
+        successful_fields = 0
+    
+    result = PopulationResult(
+        successful_fields=successful_fields,
+        failed_fields=failed_fields,
+        total_fields=len(matches),
+        error_messages=error_messages,
+        populated_fields=populated_fields
+    )
+    
+    logger.info(f"Worksheet population complete: {result}")
+    return result

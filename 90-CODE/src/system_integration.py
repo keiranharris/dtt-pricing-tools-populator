@@ -188,3 +188,81 @@ def validate_system_requirements() -> bool:
     except Exception as e:
         logger.error(f"Error validating system requirements: {e}")
         return False
+
+
+def show_rate_card_feedback(rate_card_result: Optional[dict]) -> None:
+    """
+    Display user-friendly feedback about rate card calculation results.
+    
+    Args:
+        rate_card_result: Rate card calculation result dictionary or None
+        
+    Example:
+        >>> show_rate_card_feedback({"success": True, "successful_calculations": 5})
+        📊 Rate Card: 5 rates calculated successfully
+    """
+    if not rate_card_result:
+        print("📊 Rate Card calculation skipped (not available or disabled)")
+        return
+    
+    if rate_card_result.get("success", False):
+        calculations = rate_card_result.get("successful_calculations", 0)
+        rates_written = rate_card_result.get("rates_written", 0)
+        margin_pct = rate_card_result.get("client_margin_percent", 0)
+        
+        print(f"📊 Rate Card: {calculations} rates calculated at {margin_pct:.1f}% margin")
+        
+        if rates_written == calculations and calculations > 0:
+            print("✅ All calculated rates written to spreadsheet successfully")
+        elif rates_written > 0:
+            print(f"✅ {rates_written}/{calculations} rates written to spreadsheet")
+        elif calculations > 0:
+            print(f"⚠️  {calculations} rates calculated but none written to spreadsheet")
+    else:
+        errors = rate_card_result.get("errors", ["Unknown error"])
+        print(f"❌ Rate Card calculation failed: {errors[0] if errors else 'Unknown error'}")
+        
+        if len(errors) > 1:
+            print(f"   Additional errors: {len(errors) - 1} more")
+
+
+def show_complete_workflow_feedback(
+    population_summary,
+    resource_result: Optional[dict] = None,
+    rate_card_result: Optional[dict] = None
+) -> None:
+    """
+    Display comprehensive feedback for complete workflow execution.
+    
+    Args:
+        population_summary: Data population summary
+        resource_result: Optional resource setup result
+        rate_card_result: Optional rate card calculation result
+        
+    Example:
+        >>> show_complete_workflow_feedback(summary, resource_result, rate_result)
+        🎉 Workflow Complete:
+        📋 Data Population: 5/7 fields populated
+        📊 Rate Card: 7 rates calculated
+    """
+    print("\n🎉 Workflow Complete:")
+    
+    # Show population feedback
+    if population_summary:
+        if population_summary.fields_populated > 0:
+            print(f"📋 Data Population: {population_summary.fields_populated}/{population_summary.fields_matched} fields populated")
+        else:
+            print("📋 Data Population: No fields populated")
+    
+    # Show resource setup feedback
+    if resource_result:
+        if resource_result.get("success", False):
+            cells_copied = resource_result.get("cells_copied", 0)
+            print(f"📦 Resource Setup: {cells_copied} cells copied")
+        else:
+            print("📦 Resource Setup: Failed or skipped")
+    
+    # Show rate card feedback
+    show_rate_card_feedback(rate_card_result)
+    
+    print("🎯 Your pricing tool is ready to use!")
