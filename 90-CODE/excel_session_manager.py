@@ -194,7 +194,7 @@ def consolidated_data_population(
     cli_data: Dict[str, str],
     client_margin_decimal: float,
     constants_dir_name: str = "00-CONSTANTS",
-    field_match_threshold: float = 0.8,
+    field_match_threshold: float = 0.65,
     enable_resource_setup: bool = True,
     enable_rate_card: bool = True,
     resource_row_count: int = 7
@@ -492,7 +492,7 @@ def _populate_data_in_session(
         worksheet = session.get_worksheet("Pricing Setup")
         
         # Find field matches using worksheet directly (no file operations)
-        matches = find_matching_fields_in_worksheet(merged_data, worksheet, threshold)
+        matches = find_matching_fields_in_worksheet(merged_data, worksheet, 0.65)
         
         # Populate fields using worksheet directly
         result = populate_fields_in_worksheet(worksheet, matches)
@@ -603,17 +603,12 @@ def _calculate_rate_card_in_session(
 
 
 # Helper functions for easier integration with existing modules
-def find_matching_fields_in_worksheet(source_data: Dict[str, str], worksheet, threshold: float = 0.8):
+def find_matching_fields_in_worksheet_local(source_data: Dict[str, str], worksheet, threshold: float = 0.65):
     """Find matching fields using worksheet object directly."""
-    # This would need to be implemented to work with worksheet objects
-    # instead of requiring file operations
-    from field_matcher import find_matching_fields
+    # Use the real field matching implementation from field_matcher.py
+    from field_matcher import find_matching_fields_in_worksheet as real_find_matching_fields
     
-    # For now, create a temporary minimal implementation
-    # In full implementation, this would parse the worksheet directly
-    matches = []
-    # Implementation would go here...
-    return matches
+    return real_find_matching_fields(source_data, worksheet, threshold)
 
 
 def populate_fields_in_worksheet(worksheet, matches):

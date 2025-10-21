@@ -21,10 +21,23 @@ from typing import Dict, List, Optional, Any
 import logging
 import time
 
+# Import SpecKit data models
+from data_models import (
+    CLICollectionResult, 
+    CLIFieldValue, 
+    PopulationResult,
+    PopulationSummary, 
+    OperationError,
+    ConstantsData,
+    FieldMatch,
+    ResourceCopyResult,
+    ValidationResult
+)
+
 # Import other module types
 from excel_constants_reader import read_constants_data, validate_constants_file
-from field_matcher import find_matching_fields, find_matching_fields_xlwings, FieldMatch
-from excel_data_populator import populate_matched_fields, populate_matched_fields_xlwings, PopulationResult
+from field_matcher import find_matching_fields, find_matching_fields_xlwings
+from excel_data_populator import populate_matched_fields, populate_matched_fields_xlwings
 from cli_data_merger import merge_cli_with_constants, validate_cli_data, get_cli_field_summary
 from cli_population_feedback import display_cli_population_summary, generate_population_results_dict, log_cli_integration_summary
 
@@ -32,25 +45,9 @@ from cli_population_feedback import display_cli_population_summary, generate_pop
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class PopulationSummary:
-    """Comprehensive summary of data population operation."""
-    constants_file_found: bool
-    constants_loaded: int
-    fields_matched: int
-    fields_populated: int
-    execution_time_seconds: float
-    errors: List[str]
-    warnings: List[str]
-    
-    def __str__(self) -> str:
-        status = "SUCCESS" if self.fields_populated > 0 else "PARTIAL" if self.fields_matched > 0 else "FAILED"
-        return f"Population Summary [{status}]: {self.fields_populated} fields populated in {self.execution_time_seconds:.1f}s"
-
-
 def populate_spreadsheet_data(target_file: Path, constants_filename: str, 
                             constants_dir_name: str = "00-CONSTANTS",
-                            threshold: float = 0.8) -> PopulationSummary:
+                            threshold: float = 0.65) -> PopulationSummary:
     """
     Main orchestration function for complete data population process.
     
@@ -291,7 +288,7 @@ def show_population_feedback(summary: PopulationSummary) -> None:
 def populate_spreadsheet_data_with_cli(target_file: Path, constants_filename: str,
                                      cli_data: Optional[Dict[str, str]] = None,
                                      constants_dir_name: str = "00-CONSTANTS",
-                                     threshold: float = 0.8) -> PopulationSummary:
+                                     threshold: float = 0.65) -> PopulationSummary:
     """
     Enhanced orchestration function supporting CLI field population alongside constants.
     
@@ -574,7 +571,7 @@ def populate_spreadsheet_data_with_cli_and_resources(
     constants_filename: str,
     cli_data: Optional[Dict[str, str]] = None,
     constants_dir_name: str = "00-CONSTANTS",
-    field_match_threshold: float = 0.8,
+    field_match_threshold: float = 0.65,
     enable_resource_setup: bool = True,
     resource_row_count: int = 7
 ) -> PopulationSummary:
@@ -701,7 +698,7 @@ def populate_spreadsheet_data_with_cli_resources_and_rates(
     cli_data: Optional[Dict[str, str]] = None,
     client_margin_decimal: Optional[float] = None,
     constants_dir_name: str = "00-CONSTANTS",
-    field_match_threshold: float = 0.8,
+    field_match_threshold: float = 0.65,
     enable_resource_setup: bool = True,
     enable_rate_card: bool = True,
     resource_row_count: int = 7
@@ -797,7 +794,7 @@ def populate_spreadsheet_data_consolidated_session(
     cli_data: Optional[Dict[str, str]] = None,
     client_margin_decimal: Optional[float] = None,
     constants_dir_name: str = "00-CONSTANTS",
-    field_match_threshold: float = 0.8,
+    field_match_threshold: float = 0.65,
     enable_resource_setup: bool = True,
     enable_rate_card: bool = True,
     resource_row_count: int = 7

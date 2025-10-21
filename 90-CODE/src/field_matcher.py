@@ -24,28 +24,69 @@ import difflib
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class CellLocation:
-    """Represents a cell location in an Excel worksheet."""
-    row: int
-    column: int
-    cell_reference: str  # e.g., "B15"
-    content: str = ""  # The actual text content of the cell
-    
-    def __str__(self) -> str:
-        return f"Cell {self.cell_reference} (Row {self.row}, Col {self.column}): '{self.content}'"
+# Import SpecKit data models
+from data_models import CellLocation, FieldMatch
 
 
-@dataclass
-class FieldMatch:
-    """Represents a matched field between source constants and target spreadsheet."""
-    source_field: str
-    target_location: CellLocation
-    confidence: float
-    source_value: str
+def scan_worksheet_for_pricing_setup_fields(worksheet) -> List[CellLocation]:
+    """
+    Scan only the hard-coded columns for field names in 'Pricing Setup' sheet for performance.
+    Uses global constants for column indices.
+    """
+    from constants import PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX
+    cell_locations = []
+    max_row = min(worksheet.max_row, 100)
+    allowed_columns = [PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX]
+    for row in range(1, max_row + 1):
+        for col in allowed_columns:
+            try:
+                cell = worksheet.cell(row=row, column=col)
+                if cell.value is None:
+                    continue
+                cell_text = str(cell.value).strip()
+                if _is_potential_field_name(cell_text):
+                    from openpyxl.utils import get_column_letter
+                    col_letter = get_column_letter(col)
+                    cell_ref = f"{col_letter}{row}"
+                    location = CellLocation(row=row, column=col, cell_reference=cell_ref, content=cell_text)
+                    cell_locations.append(location)
+            except Exception as e:
+                continue
+    return cell_locations
+
+
+def scan_worksheet_for_pricing_setup_fields_xlwings(worksheet) -> List[CellLocation]:
+    """
+    Scan only the hard-coded columns for field names in 'Pricing Setup' sheet for performance (xlwings version).
+    Uses global constants for column indices.
+    """
+    from constants import PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX
+    cell_locations = []
+    max_row = 100  # Reasonable limit for performance
+    allowed_columns = [PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX]  # E and F
     
-    def __str__(self) -> str:
-        return f"Match: '{self.source_field}' -> {self.target_location} (confidence: {self.confidence:.1%})"
+    logger.info(f"DEBUG: Scanning xlwings worksheet columns {allowed_columns} (E,F) up to row {max_row}")
+    
+    for row in range(1, max_row + 1):
+        for col in allowed_columns:
+            try:
+                # Convert column index to letter for xlwings
+                col_letter = chr(64 + col)  # 5->E, 6->F
+                cell_ref = f"{col_letter}{row}"
+                cell_value = worksheet.range(cell_ref).value
+                
+                if cell_value and isinstance(cell_value, str):
+                    cell_text = cell_value.strip()
+                    if _is_potential_field_name(cell_text):
+                        location = CellLocation(row=row, column=col, cell_reference=cell_ref, content=cell_text)
+                        cell_locations.append(location)
+                        if len(cell_locations) <= 10:  # Log first 10 findings
+                            logger.info(f"DEBUG: Found potential field at {cell_ref}: '{cell_text}'")
+            except Exception as e:
+                continue
+    
+    logger.info(f"DEBUG: xlwings scanning found {len(cell_locations)} potential fields")
+    return cell_locations
 
 
 def core_string_match(source_field: str, target_field: str, strip_count: int = 2) -> float:
@@ -68,21 +109,62 @@ def core_string_match(source_field: str, target_field: str, strip_count: int = 2
     if not source_field or not target_field:
         return 0.0
     
-    # Strip decorations and normalize case
-    source_core = strip_decorations(source_field, strip_count).lower()
-    target_core = strip_decorations(target_field, strip_count).lower()
+    # Enhanced normalization for better matching
+    source_normalized = normalize_field_name(source_field)
+    target_normalized = normalize_field_name(target_field)
     
-    # Handle empty cores after stripping
-    if not source_core or not target_core:
+    # Handle empty fields after normalization
+    if not source_normalized or not target_normalized:
         return 0.0
     
     # Use difflib for sequence matching
-    similarity = difflib.SequenceMatcher(None, source_core, target_core).ratio()
+    similarity = difflib.SequenceMatcher(None, source_normalized, target_normalized).ratio()
     
     logger.debug(f"String match: '{source_field}' -> '{target_field}'")
-    logger.debug(f"  Core: '{source_core}' -> '{target_core}' = {similarity:.2f}")
+    logger.debug(f"  Normalized: '{source_normalized}' -> '{target_normalized}' = {similarity:.2f}")
     
     return similarity
+
+
+def normalize_field_name(field_name: str) -> str:
+    """
+    Normalize field names for better matching by removing common decorations and variations.
+    
+    Args:
+        field_name: Original field name
+        
+    Returns:
+        Normalized field name for comparison
+    """
+    import re
+    
+    if not field_name:
+        return ""
+    
+    # Convert to lowercase
+    normalized = field_name.lower().strip()
+    
+    # Remove asterisks (common in required fields)
+    normalized = normalized.replace('*', '')
+    
+    # Remove common punctuation and decorations
+    normalized = re.sub(r'[:\.\-\(\)\[\]]+$', '', normalized)  # Remove trailing punctuation
+    normalized = re.sub(r'^[:\.\-\(\)\[\]]+', '', normalized)  # Remove leading punctuation
+    
+    # Remove numbers and bullets at start
+    normalized = re.sub(r'^\d+[\.\)\-\s]*', '', normalized)
+    
+    # Remove common prefixes
+    prefixes = ['a.', 'b.', 'c.', 'd.', 'e.', 'f.', 'g.', 'h.', 'i.', 'j.']
+    for prefix in prefixes:
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):].strip()
+            break
+    
+    # Normalize whitespace
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    
+    return normalized
 
 
 def strip_decorations(field_name: str, strip_count: int = 2) -> str:
@@ -182,32 +264,39 @@ def _is_potential_field_name(cell_text: str) -> bool:
     """
     # Basic filtering rules
     if len(cell_text) < 3:  # Too short to be meaningful
+        logger.debug(f"DEBUG: Filtered out (too short): '{cell_text}'")
         return False
     
     if len(cell_text) > 200:  # Too long to be a field name
+        logger.debug(f"DEBUG: Filtered out (too long): '{cell_text[:50]}...'")
         return False
     
     # Skip pure numbers
     if cell_text.replace('.', '').replace('-', '').isdigit():
+        logger.debug(f"DEBUG: Filtered out (pure number): '{cell_text}'")
         return False
     
     # Skip cells that look like formulas or references
     if cell_text.startswith('=') or cell_text.startswith('#'):
+        logger.debug(f"DEBUG: Filtered out (formula/ref): '{cell_text}'")
         return False
     
     # Skip cells with only special characters
     if not any(c.isalpha() for c in cell_text):
+        logger.debug(f"DEBUG: Filtered out (no alpha): '{cell_text}'")
         return False
     
     # Must contain some alphabetic characters (likely field names have words)
     alpha_count = sum(1 for c in cell_text if c.isalpha())
     if alpha_count < 3:  # Need at least 3 letters
+        logger.debug(f"DEBUG: Filtered out (too few letters): '{cell_text}'")
         return False
     
+    logger.debug(f"DEBUG: Accepted as potential field: '{cell_text}'")
     return True
 
 
-def find_matching_fields(source_fields: Dict[str, str], target_sheet, threshold: float = 0.8) -> List[FieldMatch]:
+def find_matching_fields(source_fields: Dict[str, str], target_sheet, threshold: float = 0.65) -> List[FieldMatch]:
     """
     Find best matches between source fields and target spreadsheet fields.
     
@@ -227,9 +316,20 @@ def find_matching_fields(source_fields: Dict[str, str], target_sheet, threshold:
         logger.info("No source fields provided for matching")
         return []
     
-    # Scan target worksheet for potential field locations
+    # Use optimized scanning for Pricing Setup sheets
     logger.info("Scanning target worksheet for field locations...")
-    target_locations = scan_worksheet_for_fields(target_sheet)
+    try:
+        # Check if this is a Pricing Setup worksheet by trying to access sheet name
+        sheet_name = getattr(target_sheet, 'title', getattr(target_sheet, 'name', ''))
+        if 'pricing setup' in sheet_name.lower():
+            logger.info("Using optimized scanning for Pricing Setup sheet")
+            target_locations = scan_worksheet_for_pricing_setup_fields(target_sheet)
+        else:
+            logger.info("Using generic scanning for worksheet")
+            target_locations = scan_worksheet_for_fields(target_sheet)
+    except Exception as e:
+        logger.warning(f"Could not determine sheet type, using generic scanning: {e}")
+        target_locations = scan_worksheet_for_fields(target_sheet)
     
     if not target_locations:
         logger.warning("No potential field locations found in target worksheet")
@@ -259,7 +359,8 @@ def find_matching_fields(source_fields: Dict[str, str], target_sheet, threshold:
                         source_field=source_field,
                         target_location=location,
                         confidence=confidence,
-                        source_value=source_value
+                        source_value=source_value,
+                        match_method="sequence_match"
                     )
                     
             except Exception as e:
@@ -278,7 +379,7 @@ def find_matching_fields(source_fields: Dict[str, str], target_sheet, threshold:
     return matches
 
 
-def find_matching_fields_xlwings(source_fields: Dict[str, str], target_file, threshold: float = 0.8) -> List[FieldMatch]:
+def find_matching_fields_xlwings(source_fields: Dict[str, str], target_file, threshold: float = 0.65) -> List[FieldMatch]:
     """
     Find matching fields using xlwings for .xlsb file support.
     
@@ -360,7 +461,8 @@ def find_matching_fields_xlwings(source_fields: Dict[str, str], target_file, thr
                                 source_field=source_field,
                                 target_location=location,
                                 confidence=confidence,
-                                source_value=source_value
+                                source_value=source_value,
+                                match_method="core_string"
                             )
                             
                     except Exception as e:
@@ -385,7 +487,7 @@ def find_matching_fields_xlwings(source_fields: Dict[str, str], target_file, thr
     return matches
 
 
-def find_matching_fields_in_worksheet(source_fields: Dict[str, str], worksheet, threshold: float = 0.8) -> List[FieldMatch]:
+def find_matching_fields_in_worksheet(source_fields: Dict[str, str], worksheet, threshold: float = 0.65) -> List[FieldMatch]:
     """
     Find matching fields using an already-open xlwings worksheet object.
     
@@ -410,29 +512,31 @@ def find_matching_fields_in_worksheet(source_fields: Dict[str, str], worksheet, 
     matches = []
     
     try:
-        # Scan for potential field locations - optimized batch reading
-        potential_locations = []
-        
-        # Read the entire range at once instead of cell-by-cell (much faster)
+        # Use optimized scanning for Pricing Setup sheets
         try:
-            # Read a reasonable scanning area in one batch call
-            range_data = worksheet.range("A1:AX150").value  # Read 150 rows × 50 columns at once
-            
-            # Process the batch data
-            for row_idx, row_data in enumerate(range_data):
-                if row_data is None:
-                    continue
-                for col_idx, cell_value in enumerate(row_data):
-                    if cell_value and isinstance(cell_value, str) and len(cell_value.strip()) > 3:
-                        # Convert to 1-based indexing for consistency
-                        row = row_idx + 1
-                        col = col_idx + 1
-                        cell_ref = f"{chr(64+col)}{row}"  # Convert to A1 notation like "A1", "B5"
-                        potential_locations.append(CellLocation(row, col, cell_ref, cell_value.strip()))
-        
+            # Check if this is a Pricing Setup worksheet by trying to access sheet name
+            sheet_name = getattr(worksheet, 'name', '')
+            if 'pricing setup' in sheet_name.lower():
+                logger.info("Using optimized xlwings scanning for Pricing Setup sheet")
+                potential_locations = scan_worksheet_for_pricing_setup_fields_xlwings(worksheet)
+            else:
+                logger.info("Using generic xlwings scanning for worksheet")
+                # Fallback to original generic scanning for non-Pricing Setup sheets
+                potential_locations = []
+                for row in range(1, 51):  # Smaller fallback range
+                    for col in range(1, 21):  # Smaller fallback range
+                        try:
+                            cell_ref = f"{chr(64+col)}{row}"
+                            cell_value = worksheet.range(cell_ref).value
+                            
+                            if cell_value and isinstance(cell_value, str) and len(cell_value.strip()) > 3:
+                                potential_locations.append(CellLocation(row, col, cell_ref, cell_value.strip()))
+                        except Exception:
+                            continue
         except Exception as e:
-            # Fallback to smaller range if the large range fails
-            logger.warning(f"Large range read failed, using fallback: {e}")
+            logger.warning(f"Could not determine sheet type, using generic xlwings scanning: {e}")
+            # Fallback to original generic scanning
+            potential_locations = []
             for row in range(1, 51):  # Smaller fallback range
                 for col in range(1, 21):  # Smaller fallback range
                     try:
@@ -461,7 +565,8 @@ def find_matching_fields_in_worksheet(source_fields: Dict[str, str], worksheet, 
                             source_field=source_field,
                             target_location=location,
                             confidence=confidence,
-                            source_value=source_value
+                            source_value=source_value,
+                            match_method="core_string_openpyxl"
                         )
                         
                 except Exception as e:
