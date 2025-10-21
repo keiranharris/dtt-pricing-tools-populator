@@ -10,6 +10,9 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
+# Import SpecKit data models
+from data_models import SourceFile, OutputFile, OperationError
+
 
 def find_source_file(source_dir: Path, pattern: str) -> Path:
     """
@@ -33,10 +36,10 @@ def find_source_file(source_dir: Path, pattern: str) -> Path:
         "FY26 Low Complexity Pricing Tool v1.2.xlsb"
     """
     if not source_dir.exists():
-        raise FileNotFoundError(f"Source directory not found: {source_dir}")
+        raise OperationError.file_not_found(str(source_dir), "Source directory not found")
     
     if not source_dir.is_dir():
-        raise FileNotFoundError(f"Source path is not a directory: {source_dir}")
+        raise OperationError.invalid_input("source_dir", f"Path is not a directory: {source_dir}")
     
     # Find files matching the pattern (exclude temporary Excel files starting with ~$)
     matching_files = []
@@ -47,13 +50,15 @@ def find_source_file(source_dir: Path, pattern: str) -> Path:
             matching_files.append(file_path)
     
     if not matching_files:
-        raise FileNotFoundError(
+        raise OperationError.file_not_found(
+            pattern,
             f"No files containing '{pattern}' found in {source_dir}. "
             f"Available files: {[f.name for f in source_dir.iterdir() if f.is_file()]}"
         )
     
     if len(matching_files) > 1:
-        raise RuntimeError(
+        raise OperationError.invalid_input(
+            "template_files",
             f"Multiple files containing '{pattern}' found in {source_dir}: "
             f"{[f.name for f in matching_files]}. Please ensure only one template exists."
         )
@@ -91,6 +96,50 @@ def extract_version_from_filename(filename: str) -> str:
     
     version = match.group(1)
     return f"V{version}"
+
+
+def discover_template_file(source_dir: Path = Path("10-LATEST-PRICING-TOOLS")) -> SourceFile:
+    """
+    Discover and validate the Low Complexity template file in source directory.
+    
+    Args:
+        source_dir: Directory to search for template files
+        
+    Returns:
+        SourceFile: Validated template file with version information
+        
+    Raises:
+        FileNotFoundError: If no template file found matching pattern
+        ValueError: If multiple matching files found or version extraction fails
+        PermissionError: If file is not readable
+        
+    Side Effects:
+        None - read-only operation
+        
+    Performance:
+        O(n) where n = number of files in source directory
+        Expected: <100ms for typical directory sizes
+    """
+    try:
+        # Use existing find_source_file logic
+        template_path = find_source_file(source_dir, "Low Complexity")
+        
+        # Extract version using existing function
+        version = extract_version_from_filename(template_path.name)
+        
+        # Create SourceFile data model
+        return SourceFile(
+            file_path=template_path,
+            original_filename=template_path.name,
+            version_number=version,
+            file_size_bytes=template_path.stat().st_size,
+            discovered_at=template_path.stat().st_mtime
+        )
+        
+    except (FileNotFoundError, RuntimeError) as e:
+        raise FileNotFoundError(f"Template discovery failed: {e}")
+    except Exception as e:
+        raise ValueError(f"Template validation failed: {e}")
 
 
 def copy_file_with_rename(source: Path, destination: Path) -> bool:
@@ -179,6 +228,56 @@ def copy_file_with_rename(source: Path, destination: Path) -> bool:
         )
     except OSError as e:
         raise OSError(f"File copy operation failed: {e}")
+
+
+def copy_file_with_metadata(source: SourceFile, destination: Path) -> OutputFile:
+    """
+    Copy source file to destination with full metadata preservation.
+    
+    Args:
+        source: Validated source file information
+        destination: Target file path (must not exist)
+        
+    Returns:
+        OutputFile: Information about the created file
+        
+    Raises:
+        FileExistsError: If destination file already exists
+        PermissionError: If cannot write to destination directory
+        OSError: If file copy operation fails
+        
+    Side Effects:
+        Creates new file at destination path
+        Preserves original file timestamps and permissions
+        
+    Performance:
+        O(1) relative to file size - streaming copy operation
+        Expected: <1s for typical .xlsb files (5-50MB)
+    """
+    if destination.exists():
+        raise FileExistsError(f"Destination file already exists: {destination}")
+    
+    try:
+        # Use existing copy function
+        success = copy_file_with_rename(source.file_path, destination)
+        
+        if not success:
+            raise OSError("File copy operation returned False")
+        
+        # Create OutputFile data model
+        return OutputFile(
+            file_path=destination,
+            generated_filename=destination.name,
+            source_template=source,
+            creation_timestamp=destination.stat().st_mtime,
+            file_size_bytes=destination.stat().st_size
+        )
+        
+    except Exception as e:
+        # Clean up partial file if it exists
+        if destination.exists():
+            destination.unlink()
+        raise
 
 
 def get_source_file_info(source_dir: Path, pattern: str) -> tuple[Path, str]:

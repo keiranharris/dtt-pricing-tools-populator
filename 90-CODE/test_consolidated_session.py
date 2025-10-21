@@ -16,7 +16,7 @@ from pathlib import Path
 # Add src directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-def test_consolidated_session_availability():
+def test_consolidated_session_availability() -> None:
     """Test if consolidated session components are available."""
     print("🧪 Testing Consolidated Excel Session Components")
     print("=" * 50)

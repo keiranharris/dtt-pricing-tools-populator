@@ -41,24 +41,27 @@ RESOURCE_SETUP_ENABLED = True                        # Feature toggle
 
 # ============================================================================
 
-from cli_interface import collect_user_inputs, collect_cli_fields, collect_margin_percentage
-from file_operations import get_source_file_info, copy_file_with_rename
-from naming_utils import generate_output_filename, get_current_date_string, handle_filename_collision
-from system_integration import (
+from src.cli_interface import collect_user_inputs, collect_cli_fields, collect_margin_percentage
+from src.file_operations import get_source_file_info, copy_file_with_rename
+from src.naming_utils import generate_output_filename, get_current_date_string, handle_filename_collision
+from src.system_integration import (
     open_file_in_finder, 
     show_success_message, 
     show_error_message, 
     validate_system_requirements
 )
 
+# Import SpecKit data models
+from src.data_models import UserInput, SourceFile, OutputFile, OperationError
+
 # Feature 002: Data Population imports (backward compatible)
-from data_population_orchestrator import populate_spreadsheet_data, show_population_feedback
+from src.data_population_orchestrator import populate_spreadsheet_data, show_population_feedback
 # Feature 003: Enhanced CLI Population imports
-from data_population_orchestrator import populate_spreadsheet_data_with_cli
+from src.data_population_orchestrator import populate_spreadsheet_data_with_cli
 # Feature 005: Resource Setup Population imports
-from data_population_orchestrator import populate_spreadsheet_data_with_cli_and_resources
+from src.data_population_orchestrator import populate_spreadsheet_data_with_cli_and_resources
 # Feature 006: Rate Card Population imports
-from data_population_orchestrator import populate_spreadsheet_data_with_cli_resources_and_rates, populate_spreadsheet_data_consolidated_session
+from src.data_population_orchestrator import populate_spreadsheet_data_with_cli_resources_and_rates, populate_spreadsheet_data_consolidated_session
 
 
 def main() -> None:
@@ -93,11 +96,11 @@ def main() -> None:
         print(f"✅ Version: {version}\n")
         
         # Step 2: Collect user inputs (Feature 003: Enhanced CLI collection)
-        cli_data = collect_cli_fields()
+        cli_result = collect_cli_fields()
         
-        # Extract individual values for backward compatibility with filename generation
-        client_name = cli_data.get("Client Name", "Unknown Client")
-        gig_name = cli_data.get("Opportunity Name", "Unknown Opportunity")  # Updated terminology
+        # Extract individual values for backward compatibility with filename generation  
+        client_name = cli_result.fields["Client Name"].sanitized_value
+        gig_name = cli_result.fields["Opportunity Name"].sanitized_value
         
         print(f"\n📝 Client: {client_name}")
         print(f"📝 Opportunity: {gig_name}")  # Updated display name
@@ -139,7 +142,7 @@ def main() -> None:
             population_summary = populate_spreadsheet_data_consolidated_session(
                 final_output_path, 
                 CONSTANTS_FILENAME,
-                cli_data,  # Feature 003: Include CLI data
+                cli_result.as_dict,  # Feature 003: Include CLI data (backward compatibility)
                 margin_decimal,  # Feature 006: Include client margin
                 CONSTANTS_DIR_NAME,
                 FIELD_MATCH_THRESHOLD,

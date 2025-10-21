@@ -30,37 +30,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ResourceCopyResult:
-    """Results from resource setup range copying."""
-    cells_copied: int
-    source_range: str
-    target_range: str
-    success: bool
-    error_messages: List[str]
-    execution_time: float
-    
-    def __str__(self) -> str:
-        status = "SUCCESS" if self.success else "FAILED"
-        return f"Resource Copy [{status}]: {self.cells_copied} cells copied in {self.execution_time:.1f}s"
-
-
-@dataclass  
-class ValidationResult:
-    """Validation results for resource setup prerequisites."""
-    source_worksheet_exists: bool
-    target_worksheet_exists: bool
-    source_data_found: bool
-    target_area_accessible: bool
-    validation_errors: List[str]
-    
-    @property
-    def is_valid(self) -> bool:
-        """Check if all validation criteria are met."""
-        return (self.source_worksheet_exists and 
-                self.target_worksheet_exists and 
-                self.source_data_found and 
-                self.target_area_accessible)
+# Import SpecKit data models
+from data_models import ResourceCopyResult, ValidationResult
 
 
 class ResourceSetupError(Exception):

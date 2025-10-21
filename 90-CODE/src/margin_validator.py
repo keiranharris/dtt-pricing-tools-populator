@@ -17,20 +17,8 @@ Feature: 006-populate-rate
 
 import re
 from typing import Optional, Union
-from dataclasses import dataclass
-
-
-@dataclass
-class MarginValidationResult:
-    """Result of margin validation operation."""
-    is_valid: bool
-    decimal_value: Optional[float] = None
-    error_message: Optional[str] = None
-    
-    def __str__(self) -> str:
-        if self.is_valid:
-            return f"Valid margin: {self.decimal_value:.3f} ({self.decimal_value * 100:.1f}%)"
-        return f"Invalid margin: {self.error_message}"
+# Import SpecKit data models
+from data_models import MarginValidationResult, OperationError
 
 
 def validate_margin_input(margin_input: str) -> MarginValidationResult:
@@ -117,12 +105,12 @@ def convert_margin_to_decimal(margin_percentage: Union[str, float]) -> float:
     else:
         result = validate_margin_input(str(margin_percentage))
         if not result.is_valid:
-            raise ValueError(result.error_message)
+            raise OperationError.invalid_input("margin_percentage", result.error_message)
         percentage_value = result.decimal_value * 100
     
     # Validate range
     if percentage_value < 35 or percentage_value > 65:
-        raise ValueError(f"Margin must be between 35% and 65%, got {percentage_value}%")
+        raise OperationError.invalid_input("margin_percentage", f"Margin must be between 35% and 65%, got {percentage_value}%")
     
     return percentage_value / 100
 

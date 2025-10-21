@@ -32,53 +32,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class StandardCostRate:
-    """Represents a standard cost rate for a staff level."""
-    staff_level: str
-    cost_rate: Optional[float] = None
-    row_index: Optional[int] = None
-    is_valid: bool = False
-    error_message: Optional[str] = None
-    cell_reference: Optional[str] = None
-    
-    def __str__(self) -> str:
-        if self.is_valid and self.cost_rate is not None:
-            return f"{self.staff_level}: ${self.cost_rate:.2f}"
-        return f"{self.staff_level}: {self.error_message or 'Invalid'}"
-
-
-@dataclass  
-class EngineeringRate:
-    """Represents a calculated engineering rate for a staff level."""
-    staff_level: str
-    standard_cost_rate: Optional[float] = None
-    client_margin: Optional[float] = None
-    engineering_rate: Optional[float] = None
-    row_index: Optional[int] = None
-    is_valid: bool = False
-    error_message: Optional[str] = None
-    cell_reference: Optional[str] = None
-    
-    def __str__(self) -> str:
-        if self.is_valid and self.engineering_rate is not None:
-            margin_pct = self.client_margin * 100 if self.client_margin else 0
-            return f"{self.staff_level}: ${self.engineering_rate:.2f} (margin {margin_pct:.1f}%)"
-        return f"{self.staff_level}: {self.error_message or 'Invalid'}"
-
-
-@dataclass
-class RateCalculationResult:
-    """Result of rate calculation operation."""
-    calculated_rates: List[EngineeringRate]
-    total_processed: int
-    successful_calculations: int
-    skipped_invalid: int
-    errors: List[str]
-    
-    def __str__(self) -> str:
-        success_rate = (self.successful_calculations / self.total_processed * 100) if self.total_processed > 0 else 0
-        return f"Rate Calculation: {self.successful_calculations}/{self.total_processed} successful ({success_rate:.1f}%)"
+# Import SpecKit data models
+from data_models import StandardCostRate, EngineeringRate, RateCalculationResult
 
 
 def calculate_engineering_rate(standard_cost_rate: float, client_margin_decimal: float) -> float:

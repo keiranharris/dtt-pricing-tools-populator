@@ -12,7 +12,7 @@ from pathlib import Path
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-def test_resource_setup_imports():
+def test_resource_setup_imports() -> None:
     """Test that all Resource Setup modules can be imported."""
     print("🔍 Testing Resource Setup module imports...")
     

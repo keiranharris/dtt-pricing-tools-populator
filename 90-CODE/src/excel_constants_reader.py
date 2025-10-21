@@ -18,6 +18,9 @@ from pathlib import Path
 from typing import Dict, Optional
 import logging
 
+# Import SpecKit data models  
+from data_models import ConstantsData
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -45,31 +48,76 @@ def read_constants_data(constants_dir: Path, filename: str) -> Dict[str, str]:
         return {}
     
     try:
-        # Import openpyxl here to handle missing dependency gracefully
+        # Import openpyxl and constants
         import openpyxl
-        
+        from constants import PRICING_SETUP_CONSTANTS_FIELD_COL, PRICING_SETUP_CONSTANTS_VALUE_COL
+
         # Load workbook (supports both .xlsx and .xlsb)
         workbook = openpyxl.load_workbook(file_path, data_only=True)
-        
+
         # Validate "Pricing Setup" worksheet exists
         if "Pricing Setup" not in workbook.sheetnames:
             logger.warning(f"'Pricing Setup' worksheet not found in {filename}")
             return {}
-        
+
         worksheet = workbook["Pricing Setup"]
-        
-        # Parse Column C → Column D mapping (field names → values)
-        field_mapping = parse_field_value_mapping(worksheet, 'C', 'D')
-        
+
+        # Use hard-coded columns for field names/values
+        field_mapping = parse_field_value_mapping(
+            worksheet,
+            PRICING_SETUP_CONSTANTS_FIELD_COL,
+            PRICING_SETUP_CONSTANTS_VALUE_COL
+        )
+
         logger.info(f"Successfully loaded {len(field_mapping)} constants from {filename}")
         return field_mapping
-        
+
     except ImportError:
         logger.error("openpyxl library not available - cannot read Excel files")
         return {}
     except Exception as e:
         logger.error(f"Error reading constants file {file_path}: {e}")
         return {}
+
+
+def read_constants_data_structured(constants_file: Path) -> ConstantsData:
+    """
+    Read field mappings from constants Excel file.
+    
+    Args:
+        constants_file: Path to constants Excel file
+        
+    Returns:
+        ConstantsData: Loaded field mappings and metadata
+        
+    Raises:
+        FileNotFoundError: If constants file doesn't exist
+        ValueError: If file format is invalid
+        PermissionError: If file is not readable
+    """
+    if not constants_file.exists():
+        raise FileNotFoundError(f"Constants file not found: {constants_file}")
+    
+    if not constants_file.is_file():
+        raise ValueError(f"Constants path is not a file: {constants_file}")
+    
+    try:
+        # Use existing read_constants_data function
+        constants_dict = read_constants_data(constants_file.parent, constants_file.name)
+        
+        # Create ConstantsData model
+        return ConstantsData(
+            constants_file_path=constants_file,
+            constants_fields=constants_dict,
+            file_size_bytes=constants_file.stat().st_size,
+            last_modified=constants_file.stat().st_mtime,
+            total_field_count=len(constants_dict)
+        )
+        
+    except PermissionError as e:
+        raise PermissionError(f"Cannot read constants file: {e}")
+    except Exception as e:
+        raise ValueError(f"Invalid constants file format: {e}")
 
 
 def validate_constants_file(file_path: Path) -> bool:

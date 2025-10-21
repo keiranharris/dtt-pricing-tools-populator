@@ -5,7 +5,7 @@ Check for Excel file lock issues and show available target files.
 
 from pathlib import Path
 
-def check_target_files():
+def check_target_files() -> None:
     """Check for target files and Excel lock issues."""
     print("🔍 Checking Target Files")
     print("=" * 40)

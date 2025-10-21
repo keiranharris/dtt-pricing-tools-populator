@@ -7,19 +7,25 @@ file data, implementing precedence rules and extensible field support.
 Feature 003: CLI Field Population Integration
 """
 
-from typing import Dict
+from typing import Dict, Union
 import logging
+
+# Import SpecKit data models
+from data_models import CLICollectionResult, ConstantsData
 
 logger = logging.getLogger(__name__)
 
 
-def merge_cli_with_constants(cli_data: Dict[str, str], constants_data: Dict[str, str]) -> Dict[str, str]:
+def merge_cli_with_constants(
+    cli_data: Union[Dict[str, str], CLICollectionResult, None], 
+    constants_data: Union[Dict[str, str], ConstantsData, None]
+) -> Dict[str, str]:
     """
     Merge CLI data with constants data, with CLI taking precedence.
     
     Args:
-        cli_data: Dictionary of field names to values collected from CLI
-        constants_data: Dictionary of field names to values from constants file
+        cli_data: CLI field data (dictionary, CLICollectionResult, or None)
+        constants_data: Constants data (dictionary, ConstantsData, or None)
         
     Returns:
         Merged dictionary with CLI values taking precedence over constants
@@ -31,23 +37,27 @@ def merge_cli_with_constants(cli_data: Dict[str, str], constants_data: Dict[str,
         >>> print(merged)
         {"Client Name": "Acme Corp", "Opportunity Name": "Project X", "Cost Centre": "12345"}
     """
-    if not cli_data:
-        logger.info("No CLI data provided, using constants data only")
-        return constants_data.copy()
+    # Convert inputs to dictionaries for processing
+    cli_dict = _convert_to_dict(cli_data) if cli_data else {}
+    constants_dict = _convert_to_dict(constants_data) if constants_data else {}
     
-    if not constants_data:
+    if not cli_dict:
+        logger.info("No CLI data provided, using constants data only")
+        return constants_dict.copy()
+    
+    if not constants_dict:
         logger.info("No constants data found, using CLI data only")
-        return cli_data.copy()
+        return cli_dict.copy()
     
     # Start with constants data as base
-    merged_data = constants_data.copy()
+    merged_data = constants_dict.copy()
     
     # Track overrides for logging
     overrides = []
     additions = []
     
     # Apply CLI data with precedence
-    for field_name, cli_value in cli_data.items():
+    for field_name, cli_value in cli_dict.items():
         if field_name in merged_data:
             if merged_data[field_name] != cli_value:
                 overrides.append(field_name)
@@ -69,7 +79,7 @@ def merge_cli_with_constants(cli_data: Dict[str, str], constants_data: Dict[str,
     return merged_data
 
 
-def validate_cli_data(cli_data: Dict[str, str]) -> bool:
+def validate_cli_data(cli_data: Union[Dict[str, str], CLICollectionResult, None]) -> bool:
     """
     Validate CLI data structure and content.
     
@@ -84,16 +94,15 @@ def validate_cli_data(cli_data: Dict[str, str]) -> bool:
         >>> print(valid)
         True
     """
-    if not isinstance(cli_data, dict):
-        logger.error("CLI data must be a dictionary")
-        return False
+    # Convert to dictionary for validation
+    cli_dict = _convert_to_dict(cli_data)
     
-    if not cli_data:
+    if not cli_dict:
         logger.warning("CLI data is empty")
         return True  # Empty CLI data is valid
     
     # Check all keys and values are strings
-    for field_name, value in cli_data.items():
+    for field_name, value in cli_dict.items():
         if not isinstance(field_name, str):
             logger.error(f"CLI field name must be string, got: {type(field_name)}")
             return False
@@ -113,7 +122,7 @@ def validate_cli_data(cli_data: Dict[str, str]) -> bool:
     return True
 
 
-def get_cli_field_summary(cli_data: Dict[str, str]) -> str:
+def get_cli_field_summary(cli_data: Union[Dict[str, str], CLICollectionResult, None]) -> str:
     """
     Generate a human-readable summary of CLI field data.
     
@@ -129,8 +138,34 @@ def get_cli_field_summary(cli_data: Dict[str, str]) -> str:
         >>> print(summary)
         "CLI Data: Client Name='Acme Corp', Opportunity Name='Project X'"
     """
-    if not cli_data:
+    # Convert to dictionary for processing
+    cli_dict = _convert_to_dict(cli_data)
+    
+    if not cli_dict:
         return "CLI Data: None"
     
-    field_summaries = [f"{field}='{value}'" for field, value in cli_data.items()]
+    field_summaries = [f"{field}='{value}'" for field, value in cli_dict.items()]
     return f"CLI Data: {', '.join(field_summaries)}"
+
+
+def _convert_to_dict(data: Union[Dict[str, str], CLICollectionResult, ConstantsData, None]) -> Dict[str, str]:
+    """
+    Convert various data types to dictionary format for processing.
+    
+    Args:
+        data: Data to convert (dictionary, CLICollectionResult, ConstantsData, or None)
+        
+    Returns:
+        Dictionary representation of the data
+    """
+    if data is None:
+        return {}
+    elif isinstance(data, dict):
+        return data
+    elif isinstance(data, CLICollectionResult):
+        return data.as_dict
+    elif isinstance(data, ConstantsData):
+        return data.constants_fields
+    else:
+        logger.warning(f"Unknown data type for conversion: {type(data)}")
+        return {}

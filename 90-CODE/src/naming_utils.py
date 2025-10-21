@@ -9,6 +9,9 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+# Import SpecKit data models
+from data_models import UserInput, SourceFile
+
 
 def sanitize_user_input(text: str) -> str:
     """
@@ -63,6 +66,43 @@ def generate_output_filename(
         "20251012 - Acme Corp - Digital Transform - (LowCompV1.2).xlsb"
     """
     return f"{date} - {client} - {gig} - (LowComp{version}).xlsb"
+
+
+def generate_output_filename_from_models(
+    user_input: UserInput, 
+    source_file: SourceFile, 
+    operation_date: datetime
+) -> str:
+    """
+    Generate standardized output filename from SpecKit data models.
+    
+    Args:
+        user_input: Validated user input
+        source_file: Source template file information
+        operation_date: Date for filename timestamp
+        
+    Returns:
+        str: Standardized filename following naming convention
+        
+    Raises:
+        ValueError: If inputs are invalid or generate invalid filename
+        
+    Side Effects:
+        None - pure function
+        
+    Performance:
+        O(1) - simple string formatting operations
+    """
+    # Format date as YYYYMMDD
+    date_str = operation_date.strftime("%Y%m%d")
+    
+    # Use the existing filename generation logic
+    return generate_output_filename(
+        date=date_str,
+        client=user_input.client_name,
+        gig=user_input.gig_name,
+        version=source_file.version_number
+    )
 
 
 def handle_filename_collision(base_path: Path) -> Path:

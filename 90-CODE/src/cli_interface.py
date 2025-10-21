@@ -2,7 +2,7 @@
 CLI interface utilities for the DTT Pricing Tool Accelerator.
 
 This module provides atomic functions for user input collection and validation,
-following the project constitution principles.
+following the project constitution principles and SpecKit data models.
 
 Feature 003: Implements extensible CLI field collection using configuration-driven approach.
 Feature 004: Adds start date and duration field collection with flexible input parsing.
@@ -10,10 +10,18 @@ Feature 004: Adds start date and duration field collection with flexible input p
 
 from datetime import datetime, timedelta
 import re
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 
 from naming_utils import sanitize_user_input
 from margin_validator import validate_margin_input, get_margin_prompt_text, get_margin_error_help
+from data_models import (
+    CLIFieldConfig, 
+    CLIFieldValue, 
+    CLICollectionResult, 
+    UserInput,
+    OperationError,
+    ErrorType
+)
 
 # Feature 004: Date calculation functions
 def calculate_default_start_date() -> str:
@@ -113,41 +121,47 @@ def validate_duration_input(duration_string: str) -> bool:
         return False
 
 
-# CLI Fields Configuration - Extensible design for easy addition of new fields
-CLI_FIELDS_CONFIG = {
-    "Client Name": {
-        "prompt": "Enter Client Name:",
-        "field_key": "client_name",
-        "error_empty": "❌ Client name cannot be empty. Please try again.",
-        "error_invalid": "❌ Client name contains only invalid characters. Please try again."
-    },
-    "Opportunity Name": {
-        "prompt": "Enter Opportunity Name:",
-        "field_key": "opportunity_name", 
-        "error_empty": "❌ Opportunity name cannot be empty. Please try again.",
-        "error_invalid": "❌ Opportunity name contains only invalid characters. Please try again."
-    },
-    "Start Date (DD/MM/YY)": {
-        "prompt_template": "Enter Start Date (DD/MM/YY) [default: {default}]:",
-        "field_key": "start_date",
-        "default_generator": calculate_default_start_date,
-        "validator": lambda x: parse_date_input(x) is not None,
-        "error_empty": "❌ Using default start date.",
-        "error_invalid": "❌ Invalid date format. Please use DD/MM/YY, DD-MM-YY, or DD.MM.YY (e.g., 15/11/25, 15-11-25, 15.11.25)"
-    },
-    "No of Periods (in Weeks)": {
-        "prompt": "Enter No of Periods (in Weeks):",
-        "field_key": "duration_weeks",
-        "validator": validate_duration_input,
-        "error_empty": "❌ Duration is required. Please enter a number between 1-52.",
-        "error_invalid": "❌ Duration must be a whole number between 1-52 weeks (e.g., 12, 26, 52)"
-    }
+# CLI Fields Configuration - Using SpecKit data models
+CLI_FIELDS_CONFIG: Dict[str, CLIFieldConfig] = {
+    "Client Name": CLIFieldConfig(
+        prompt="Enter Client Name:",
+        field_key="client_name",
+        required=True,
+        max_length=50,
+        error_empty="❌ Client name cannot be empty. Please try again.",
+        error_invalid="❌ Client name contains only invalid characters. Please try again."
+    ),
+    "Opportunity Name": CLIFieldConfig(
+        prompt="Enter Opportunity Name:",
+        field_key="opportunity_name",
+        required=True,
+        max_length=50,
+        error_empty="❌ Opportunity name cannot be empty. Please try again.",
+        error_invalid="❌ Opportunity name contains only invalid characters. Please try again."
+    ),
+    "Start Date (DD/MM/YY)": CLIFieldConfig(
+        prompt="Enter Start Date (DD/MM/YY) [default: {default}]:",
+        field_key="start_date",
+        required=True,
+        default_generator=calculate_default_start_date,
+        validator=lambda x: parse_date_input(x) is not None,
+        error_empty="❌ Using default start date.",
+        error_invalid="❌ Invalid date format. Please use DD/MM/YY, DD-MM-YY, or DD.MM.YY (e.g., 15/11/25, 15-11-25, 15.11.25)"
+    ),
+    "No of Periods (in Weeks)": CLIFieldConfig(
+        prompt="Enter No of Periods (in Weeks):",
+        field_key="duration_weeks",
+        required=True,
+        validator=validate_duration_input,
+        error_empty="❌ Duration is required. Please enter a number between 1-52.",
+        error_invalid="❌ Duration must be a whole number between 1-52 weeks (e.g., 12, 26, 52)"
+    )
     # Future fields can be easily added here:
-    # "Project Manager": {"prompt": "Enter Project Manager:", "field_key": "project_manager", ...}
+    # "Project Manager": CLIFieldConfig(prompt="Enter Project Manager:", field_key="project_manager", ...)
 }
 
 
-def prompt_for_field(field_name: str) -> str:
+def prompt_for_field(field_name: str) -> CLIFieldValue:
     """
     Prompt the user for any configured field with validation and sanitization.
     
@@ -155,60 +169,64 @@ def prompt_for_field(field_name: str) -> str:
         field_name: Name of field from CLI_FIELDS_CONFIG to prompt for
         
     Returns:
-        Sanitized field value string (guaranteed to be non-empty)
+        CLIFieldValue with collected and sanitized value
         
-    Example:
-        >>> prompt_for_field("Client Name")
-        Enter Client Name: Acme Corp & Co.
-        -> Returns: "Acme Corp  Co"
+    Raises:
+        OperationError: If field configuration is invalid
     """
     if field_name not in CLI_FIELDS_CONFIG:
-        raise ValueError(f"Unknown field name: {field_name}")
+        raise OperationError.invalid_input(field_name, f"Unknown field configuration: {field_name}")
     
     config = CLI_FIELDS_CONFIG[field_name]
     
-    # Generate dynamic prompt for fields with templates
-    if "prompt_template" in config and "default_generator" in config:
-        default_value = config["default_generator"]()
-        prompt_text = config["prompt_template"].format(default=default_value)
+    # Generate dynamic prompt for fields with default generators
+    if config.default_generator:
+        default_value = config.default_generator()
+        prompt_text = config.prompt.format(default=default_value)
     else:
-        prompt_text = config.get("prompt", f"Enter {field_name}:")
+        prompt_text = config.prompt
     
     while True:
         user_input = input(f"{prompt_text} ").strip()
         
         # Handle empty input - check for default generator
         if not user_input:
-            if "default_generator" in config:
+            if config.default_generator:
                 # Use default value for fields with generators (like dates)
-                default_value = config["default_generator"]()
-                print(config["error_empty"])
-                return default_value.split(" (")[0]  # Extract just the date part
+                default_raw = config.default_generator()
+                default_value = default_raw.split(" (")[0]  # Extract just the date part
+                print(config.error_empty)
+                return CLIFieldValue(
+                    field_name=field_name,
+                    value=default_value,
+                    sanitized_value=default_value,
+                    collected_at=datetime.now(),
+                    used_default=True
+                )
             else:
-                # Required field with no default
-                print(config["error_empty"])
+                print(config.error_empty)
                 continue
         
-        # Apply custom validator if configured
-        if "validator" in config:
-            if not config["validator"](user_input):
-                print(config["error_invalid"])
-                continue
-            # For date fields, return formatted value
-            if field_name == "Start Date (DD/MM/YY)":
-                parsed_date = parse_date_input(user_input)
-                return parsed_date.strftime("%d/%m/%y")
-            # For duration, return as-is (already validated as integer)
-            return user_input
-        
-        # Legacy path: sanitization for text fields
-        sanitized = sanitize_user_input(user_input)
-        
-        if not sanitized:
-            print(config["error_invalid"])
+        # Validate input if validator provided
+        if config.validator and not config.validator(user_input):
+            print(config.error_invalid)
             continue
         
-        return sanitized
+        # Sanitize input
+        sanitized = sanitize_user_input(user_input)
+        
+        # Check if sanitized input is still valid
+        if not sanitized or not sanitized.strip():
+            print(config.error_invalid)
+            continue
+        
+        return CLIFieldValue(
+            field_name=field_name,
+            value=user_input,
+            sanitized_value=sanitized,
+            collected_at=datetime.now(),
+            used_default=False
+        )
 
 
 def prompt_for_client_name() -> str:
@@ -250,6 +268,58 @@ def prompt_for_gig_name() -> str:
     return prompt_for_opportunity_name()
 
 
+def prompt_for_text(prompt: str, field_name: str, max_length: int = 50) -> str:
+    """
+    Prompt user for text input with validation and sanitization.
+    
+    Args:
+        prompt: Text to display to user
+        field_name: Name of field for error messages
+        max_length: Maximum allowed length
+        
+    Returns:
+        str: Validated and trimmed user input
+        
+    Raises:
+        ValueError: If input is empty after trimming
+        KeyboardInterrupt: If user cancels input
+        
+    Side Effects:
+        Prints prompt to stdout
+        Reads from stdin
+        May re-prompt for invalid input
+        
+    Performance:
+        O(1) for validation operations
+    """
+    while True:
+        try:
+            user_input = input(f"{prompt}: ").strip()
+            
+            if not user_input:
+                print(f"❌ {field_name} cannot be empty. Please try again.")
+                continue
+            
+            if len(user_input) > max_length:
+                print(f"❌ {field_name} must be {max_length} characters or less. Please try again.")
+                continue
+            
+            # Sanitize input
+            sanitized = sanitize_user_input(user_input)
+            
+            if not sanitized.strip():
+                print(f"❌ {field_name} contains only invalid characters. Please try again.")
+                continue
+            
+            return sanitized.strip()
+            
+        except KeyboardInterrupt:
+            print("\n❌ Operation cancelled by user.")
+            raise
+        except EOFError:
+            raise OperationError.invalid_input(field_name, "No input provided")
+
+
 def validate_user_input(input_text: str) -> bool:
     """
     Validate that user input is acceptable (non-empty after sanitization).
@@ -275,46 +345,57 @@ def validate_user_input(input_text: str) -> bool:
     return bool(sanitized and sanitized.strip())
 
 
-def collect_cli_fields() -> dict[str, str]:
+def collect_cli_fields() -> CLICollectionResult:
     """
     Collect all configured CLI fields from user using extensible design.
     
     Returns:
-        Dictionary mapping field names to sanitized user inputs
+        CLICollectionResult with collected field values and metadata
         
     Example:
-        >>> cli_data = collect_cli_fields()
+        >>> result = collect_cli_fields()
         Enter Client Name: Acme Corp
         Enter Opportunity Name: Digital Transform
-        >>> print(cli_data)
+        >>> print(result.as_dict())
         {"Client Name": "Acme Corp", "Opportunity Name": "Digital Transform"}
     """
     print("\n📋 Please provide the following information:")
     print("   (Special characters will be automatically removed)")
     
-    cli_data = {}
-    for field_name in CLI_FIELDS_CONFIG.keys():
-        cli_data[field_name] = prompt_for_field(field_name)
+    collection_started = datetime.now()
+    fields = {}
     
-    return cli_data
+    for field_name in CLI_FIELDS_CONFIG.keys():
+        field_value = prompt_for_field(field_name)
+        fields[field_name] = field_value
+    
+    return CLICollectionResult(
+        fields=fields,
+        collection_started=collection_started,
+        collection_completed=datetime.now(),
+        success=True
+    )
 
 
-def collect_user_inputs() -> tuple[str, str]:
+def collect_user_inputs() -> UserInput:
     """
-    Legacy function - collect both client name and opportunity name from user.
+    Collect user inputs and return as structured UserInput data model.
     
     Returns:
-        Tuple of (client_name, opportunity_name) both sanitized and validated
+        UserInput with validated client name and gig name
         
     Example:
-        >>> client, opportunity = collect_user_inputs()
+        >>> user_input = collect_user_inputs()
         Enter Client Name: Acme Corp
         Enter Opportunity Name: Digital Transform
-        >>> print(client, opportunity)
+        >>> print(user_input.client_name, user_input.gig_name)
         "Acme Corp" "Digital Transform"
     """
-    cli_data = collect_cli_fields()
-    return cli_data["Client Name"], cli_data["Opportunity Name"]
+    result = collect_cli_fields()
+    client_name = result.fields["Client Name"].sanitized_value
+    gig_name = result.fields["Opportunity Name"].sanitized_value
+    
+    return UserInput(client_name=client_name, gig_name=gig_name)
 
 
 def collect_margin_percentage() -> float:

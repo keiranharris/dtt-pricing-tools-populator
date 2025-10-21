@@ -27,24 +27,8 @@ from field_matcher import FieldMatch, CellLocation
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class PopulationResult:
-    """Results from populating data into Excel spreadsheet."""
-    successful_fields: int
-    failed_fields: int
-    total_fields: int
-    error_messages: List[str]
-    populated_fields: List[str]
-    
-    @property
-    def success_rate(self) -> float:
-        """Calculate success rate as percentage."""
-        if self.total_fields == 0:
-            return 0.0
-        return (self.successful_fields / self.total_fields) * 100
-    
-    def __str__(self) -> str:
-        return f"Population Result: {self.successful_fields}/{self.total_fields} fields ({self.success_rate:.1f}%)"
+# Import SpecKit data models
+from data_models import PopulationResult
 
 
 def write_value_to_cell(worksheet, location: CellLocation, value: str) -> bool:
@@ -118,11 +102,12 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
     try:
         # Import openpyxl for Excel operations
         import openpyxl
-        
+        from constants import PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX
+
         # Open target Excel file
         logger.info(f"Opening target file for population: {target_file}")
         workbook = openpyxl.load_workbook(target_file)
-        
+
         # Get "Pricing Setup" worksheet
         if "Pricing Setup" not in workbook.sheetnames:
             error_msg = f"Target worksheet 'Pricing Setup' not found in {target_file}"
@@ -134,34 +119,39 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
                 error_messages=[error_msg],
                 populated_fields=[]
             )
-        
+
         worksheet = workbook["Pricing Setup"]
-        
+
+        # Only allow population in hard-coded columns for 'Pricing Setup'
+        allowed_columns = {PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX}
+
         # Track results
         successful_fields = 0
         failed_fields = 0
         error_messages = []
         populated_fields = []
-        
+
         # Populate each matched field
         for match in matches:
-            logger.info(f"Populating: {match.source_field} -> {match.target_location.cell_reference}")
-            
-            success = write_value_to_cell(worksheet, match.target_location, match.source_value)
-            
-            if success:
-                successful_fields += 1
-                populated_fields.append(f"{match.source_field} -> {match.target_location.cell_reference}")
+            # Only populate if target column is allowed
+            if match.target_location.column in allowed_columns:
+                logger.info(f"Populating: {match.source_field} -> {match.target_location.cell_reference}")
+                success = write_value_to_cell(worksheet, match.target_location, match.source_value)
+                if success:
+                    successful_fields += 1
+                    populated_fields.append(f"{match.source_field} -> {match.target_location.cell_reference}")
+                else:
+                    failed_fields += 1
+                    error_msg = f"Failed to populate {match.source_field} at {match.target_location.cell_reference}"
+                    error_messages.append(error_msg)
             else:
-                failed_fields += 1
-                error_msg = f"Failed to populate {match.source_field} at {match.target_location.cell_reference}"
-                error_messages.append(error_msg)
-        
+                logger.info(f"Skipping population for {match.source_field} at {match.target_location.cell_reference} (column not allowed)")
+
         # Save workbook
         logger.info("Saving populated Excel file...")
         workbook.save(target_file)
         logger.info(f"✅ Successfully saved populated file: {target_file}")
-        
+
         # Create result summary
         result = PopulationResult(
             successful_fields=successful_fields,
@@ -170,10 +160,10 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
             error_messages=error_messages,
             populated_fields=populated_fields
         )
-        
+
         logger.info(f"Population complete: {result}")
         return result
-        
+
     except ImportError:
         error_msg = "openpyxl library not available - cannot write Excel files"
         logger.error(error_msg)
