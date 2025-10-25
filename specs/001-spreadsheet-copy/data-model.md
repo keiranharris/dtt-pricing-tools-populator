@@ -256,7 +256,7 @@ class OperationError:
 
 ### File System as Storage
 - Input: Template files in `/10-LATEST-PRICING-TOOLS/`
-- Output: Generated files in `/20-OUTPUT/`
+- Output: Generated files in OneDrive shared directory for team collaboration
 - No additional data storage requirements
 
 ## Configuration Data
@@ -268,12 +268,15 @@ from pathlib import Path
 class SystemConfig:
     """System-wide configuration constants"""
     SOURCE_DIR = Path("10-LATEST-PRICING-TOOLS")
-    OUTPUT_DIR = Path("20-OUTPUT")
+    OUTPUT_DIR = Path("~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/20-OUTPUT/").expanduser()
     TEMPLATE_PATTERN = "Low Complexity"
     EXPECTED_EXTENSION = ".xlsb"
     DATE_FORMAT = "%Y%m%d"
     TIMESTAMP_FORMAT = "%H%M%S"
     MAX_FILENAME_LENGTH = 255  # Conservative limit
+    
+    # Updated 2025-10-25: Moved to OneDrive shared library for team collaboration
+    # Path uses ~ for cross-teammate compatibility and automatic home directory expansion
 ```
 
 ## Data Transformation Pipeline

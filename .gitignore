@@ -16,6 +16,7 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -35,6 +36,7 @@ venv.bak/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -45,14 +47,23 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Excel temp files
-~$*
+# Logs
+*.log
+*.out
+
+# Temporary files
 *.tmp
+*.temp
+temp/
+tmp/
+
+# Excel temporary files
+~$*.xlsx
+~$*.xlsb
+~$*.xls
+*.xlk
 
 # Project specific
-*.xlsb
-*.xlsx
-!00-CONSTANTS/*.xlsx
-!10-LATEST-PRICING-TOOLS/*.xlsb
-20-OUTPUT/
-*.log
+debug_output/
+test_output/
+backup/

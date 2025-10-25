@@ -17,7 +17,7 @@ A consultant needs to quickly create a new pricing spreadsheet for a client proj
 
 **Acceptance Scenarios**:
 
-1. **Given** the Low Complexity template exists in `/10-LATEST-PRICING-TOOLS/`, **When** user runs the command and provides "Acme Corp" and "Digital Transformation", **Then** a file named "YYYYMMDD - Acme Corp - Digital Transformation (LowCompV1.2).xlsb" is created in `/20-OUTPUT/`
+1. **Given** the Low Complexity template exists in `/10-LATEST-PRICING-TOOLS/`, **When** user runs the command and provides "Acme Corp" and "Digital Transformation", **Then** a file named "YYYYMMDD - Acme Corp - Digital Transformation (LowCompV1.2).xlsb" is created in the OneDrive shared output directory
 2. **Given** a file already exists with the same name, **When** user creates another file with identical inputs, **Then** the system appends a timestamp to prevent overwriting
 3. **Given** user provides input with special characters, **When** the system processes the input, **Then** special characters are sanitized while preserving readable text
 
@@ -106,7 +106,10 @@ class OutputFile:
 
 ### File System Paths
 - **Source Directory**: `/10-LATEST-PRICING-TOOLS/`
-- **Destination Directory**: `/20-OUTPUT/`
+- **Destination Directory**: `~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/20-OUTPUT/`
+  - **Configuration**: Defined in `src/constants.py` as `OUTPUT_DIRECTORY` constant
+  - **Cross-team compatibility**: Uses `~` for user home directory expansion
+  - **Path handling**: Automatically created if it doesn't exist
 - **Template Pattern**: Files containing "Low Complexity" in name
 - **Output Pattern**: "YYYYMMDD - <Client> - <Gig> (LowComp<Version>).xlsb"
 

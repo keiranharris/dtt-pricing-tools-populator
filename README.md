@@ -41,7 +41,7 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 ## Directory Structure
 
 ```
-90-CODE/
+dtt-pricing-tools-populator/
 ├── pricing_tool_accelerator.py    # Main application entry point
 ├── src/                          # Core application modules
 │   ├── constants.py              # Centralized configuration
@@ -51,7 +51,8 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 │   └── ...                       # Additional modules
 ├── tests/                        # Test suite
 ├── debug/                        # Development and debugging tools
-└── docs/                         # Documentation
+├── docs/                         # Documentation
+└── specs/                        # Feature specifications
 ```
 
 ## Configuration
