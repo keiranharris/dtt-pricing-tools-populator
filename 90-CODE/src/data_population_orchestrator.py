@@ -851,7 +851,7 @@ def populate_spreadsheet_data_consolidated_session(
     """
     try:
         # Use the consolidated Excel session manager (when fully implemented)
-        from excel_session_manager import consolidated_data_population
+        from src.excel_session_manager import consolidated_data_population
         
         logger.info("🚀 Starting CONSOLIDATED Excel session workflow...")
         logger.info("   ⚡ Single permission dialog, dramatic performance improvement!")

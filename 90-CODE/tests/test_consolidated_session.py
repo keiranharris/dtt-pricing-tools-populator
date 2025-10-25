@@ -24,7 +24,7 @@ def test_consolidated_session_availability() -> None:
     # Test 1: ExcelSessionManager
     print("1. Testing ExcelSessionManager...")
     try:
-        from excel_session_manager import ExcelSessionManager, ExcelSessionError
+        from src.excel_session_manager import ExcelSessionManager, ExcelSessionError
         print("   ✅ ExcelSessionManager imported successfully")
     except ImportError as e:
         print(f"   ❌ ExcelSessionManager import failed: {e}")
@@ -33,7 +33,7 @@ def test_consolidated_session_availability() -> None:
     # Test 2: Consolidated function
     print("2. Testing consolidated_data_population...")
     try:
-        from excel_session_manager import consolidated_data_population
+        from src.excel_session_manager import consolidated_data_population
         print("   ✅ consolidated_data_population imported successfully")
     except ImportError as e:
         print(f"   ❌ consolidated_data_population import failed: {e}")
@@ -65,7 +65,7 @@ def test_session_manager_basic():
     print("=" * 50)
     
     try:
-        from excel_session_manager import ExcelSessionManager, ExcelSessionError
+        from src.excel_session_manager import ExcelSessionManager, ExcelSessionError
         
         # Test with non-existent file (should fail gracefully)
         print("1. Testing with non-existent file...")

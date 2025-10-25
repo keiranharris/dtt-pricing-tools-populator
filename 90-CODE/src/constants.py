@@ -10,13 +10,13 @@ Global constants for column mappings in Pricing Tool Accelerator
 # Uses ~ for cross-teammate compatibility (automatic home directory expansion)
 
 # Constants directory - contains Excel files with field mappings and values
-CONSTANTS_DIRECTORY = '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/00-CONSTANTS/'
+CONSTANTS_DIRECTORY =               '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/00-CONSTANTS/'
 
 # Source pricing tools directory - contains template Excel files
-PRICING_TOOL_SOURCE_DIRECTORY = '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/10-LATEST-PRICING-TOOLS/'
+PRICING_TOOL_SOURCE_DIRECTORY =     '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/10-LATEST-PRICING-TOOLS/'
 
 # Output directory - where completed pricing tools are saved
-OUTPUT_DIRECTORY = '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/20-OUTPUT/'
+OUTPUT_DIRECTORY =                  '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(O365D)/AU CBO Practice - MO - Cloud Network & Security/_PRESALES/_PROPOSALS/_PricingToolAccel/20-OUTPUT/'
 
 # Pricing Setup sheet column mappings
 PRICING_SETUP_CONSTANTS_FIELD_COL = 'C'  # Field names in constants file
