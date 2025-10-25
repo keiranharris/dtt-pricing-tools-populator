@@ -22,7 +22,10 @@ def test_unlocked_file():
         constants_file = constants_dir / "lowcomplexity_const_KHv1.xlsx"
         
         # Find an available target file (not locked)
-        output_dir = Path(__file__).parent.parent / "20-OUTPUT"
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
+        from constants import OUTPUT_DIRECTORY
+        output_dir = Path(OUTPUT_DIRECTORY).expanduser()
         available_files = [f for f in output_dir.glob("*.xlsb") if not f.name.startswith("~$")]
         
         if not available_files:

@@ -65,27 +65,65 @@ def scan_worksheet_for_pricing_setup_fields_xlwings(worksheet) -> List[CellLocat
     max_row = 100  # Reasonable limit for performance
     allowed_columns = [PRICING_SETUP_OUTPUT_FIELD_COL_IDX, PRICING_SETUP_OUTPUT_VALUE_COL_IDX]  # E and F
     
+    import time
+    start_time = time.time()
     logger.info(f"DEBUG: Scanning xlwings worksheet columns {allowed_columns} (E,F) up to row {max_row}")
     
-    for row in range(1, max_row + 1):
-        for col in allowed_columns:
-            try:
-                # Convert column index to letter for xlwings
-                col_letter = chr(64 + col)  # 5->E, 6->F
-                cell_ref = f"{col_letter}{row}"
-                cell_value = worksheet.range(cell_ref).value
-                
-                if cell_value and isinstance(cell_value, str):
-                    cell_text = cell_value.strip()
-                    if _is_potential_field_name(cell_text):
-                        location = CellLocation(row=row, column=col, cell_reference=cell_ref, content=cell_text)
-                        cell_locations.append(location)
-                        if len(cell_locations) <= 10:  # Log first 10 findings
-                            logger.info(f"DEBUG: Found potential field at {cell_ref}: '{cell_text}'")
-            except Exception as e:
-                continue
+    # PERFORMANCE OPTIMIZATION: Read entire ranges in batch instead of cell-by-cell
+    # This reduces 200 Excel API calls to just 2 calls (massive speed improvement)
+    try:
+        # Read column E (field names) in one batch operation
+        col_e_values = worksheet.range(f"E1:E{max_row}").value
+        # Read column F (potential values) in one batch operation  
+        col_f_values = worksheet.range(f"F1:F{max_row}").value
+        
+        # Ensure values are lists (xlwings returns single value if range is 1 cell)
+        if not isinstance(col_e_values, list):
+            col_e_values = [col_e_values] if col_e_values is not None else [None]
+        if not isinstance(col_f_values, list):
+            col_f_values = [col_f_values] if col_f_values is not None else [None]
+            
+        # Process the batch-read data
+        for row_idx, (col_e_val, col_f_val) in enumerate(zip(col_e_values, col_f_values), 1):
+            # Check column E (5)
+            if col_e_val and isinstance(col_e_val, str):
+                cell_text = col_e_val.strip()
+                if _is_potential_field_name(cell_text):
+                    location = CellLocation(row=row_idx, column=5, cell_reference=f"E{row_idx}", content=cell_text)
+                    cell_locations.append(location)
+                    if len(cell_locations) <= 10:  # Log first 10 findings
+                        logger.info(f"DEBUG: Found potential field at E{row_idx}: '{cell_text}'")
+            
+            # Check column F (6) 
+            if col_f_val and isinstance(col_f_val, str):
+                cell_text = col_f_val.strip()
+                if _is_potential_field_name(cell_text):
+                    location = CellLocation(row=row_idx, column=6, cell_reference=f"F{row_idx}", content=cell_text)
+                    cell_locations.append(location)
+                    if len(cell_locations) <= 10:  # Log first 10 findings  
+                        logger.info(f"DEBUG: Found potential field at F{row_idx}: '{cell_text}'")
+                        
+    except Exception as e:
+        logger.warning(f"Batch read failed, falling back to individual cell reads: {e}")
+        # Fallback to original method if batch read fails
+        for row in range(1, max_row + 1):
+            for col in allowed_columns:
+                try:
+                    col_letter = chr(64 + col)  # 5->E, 6->F
+                    cell_ref = f"{col_letter}{row}"
+                    cell_value = worksheet.range(cell_ref).value
+                    
+                    if cell_value and isinstance(cell_value, str):
+                        cell_text = cell_value.strip()
+                        if _is_potential_field_name(cell_text):
+                            location = CellLocation(row=row, column=col, cell_reference=cell_ref, content=cell_text)
+                            cell_locations.append(location)
+                except Exception:
+                    continue
     
-    logger.info(f"DEBUG: xlwings scanning found {len(cell_locations)} potential fields")
+    end_time = time.time()
+    scan_duration = end_time - start_time
+    logger.debug(f"xlwings scanning found {len(cell_locations)} potential fields in {scan_duration:.2f}s")
     return cell_locations
 
 

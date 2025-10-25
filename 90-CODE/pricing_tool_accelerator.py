@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Constants file configuration
 CONSTANTS_FILENAME = "lowcomplexity_const_KHv1.xlsx"  # Easy to update when constants file changes
-CONSTANTS_DIR_NAME = "00-CONSTANTS"                   # Directory containing constants files
+# CONSTANTS_DIR_NAME removed - now using CONSTANTS_DIRECTORY from src.constants
 
 # Target worksheet configuration  
 TARGET_WORKSHEET_NAME = "Pricing Setup"               # Worksheet to populate in target file
@@ -38,6 +38,13 @@ CHAR_STRIP_COUNT = 2                                 # Characters to strip from 
 RESOURCE_SETUP_ROW_COUNT = 7                         # Number of resource rows to copy
 RESOURCE_SETUP_WORKSHEET_NAME = "Resource Setup"     # Worksheet name in both files
 RESOURCE_SETUP_ENABLED = True                        # Feature toggle
+
+# ============================================================================
+# FEATURE 007: CLI OUTPUT CONFIGURATION
+# ============================================================================
+# Controls production vs verbose CLI output mode
+
+VERBOSE_LOGGING_ENABLED = False                       # Production mode by default
 
 # ============================================================================
 
@@ -66,6 +73,11 @@ from src.data_population_orchestrator import populate_spreadsheet_data_with_cli_
 
 def main() -> None:
     """Main entry point for the pricing tool accelerator."""
+    
+    # Feature 007: Initialize production logging system
+    from src.system_integration import setup_production_logging
+    setup_production_logging(verbose_enabled=VERBOSE_LOGGING_ENABLED)
+    
     print("🚀 DTT Pricing Tool Accelerator v1.0.0")
     print("   Automating pricing tool spreadsheet setup...")
     print("   Features: File Copy + Data Population + Resource Setup + Rate Card Calculation\n")
@@ -81,17 +93,21 @@ def main() -> None:
     
     try:
         # Configuration
-        source_dir = Path(__file__).parent.parent / "10-LATEST-PRICING-TOOLS"
-        output_dir = Path(__file__).parent.parent / "20-OUTPUT"
+        from src.constants import OUTPUT_DIRECTORY, PRICING_TOOL_SOURCE_DIRECTORY
+        source_dir = Path(PRICING_TOOL_SOURCE_DIRECTORY).expanduser()  # Use centralized constant
+        output_dir = Path(OUTPUT_DIRECTORY).expanduser()  # expanduser() handles ~ properly
         search_pattern = "Low Complexity"
+        
+        # Ensure output directory exists
+        output_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"📁 Source directory: {source_dir}")
         print(f"📁 Output directory: {output_dir}")
         print(f"🔍 Searching for: {search_pattern}\n")
         
-        # Step 1: Find source file and extract version
+        # Step 1: Find source file and extract version (using centralized constants)
         print("🔍 Finding source template...")
-        source_file, version = get_source_file_info(source_dir, search_pattern)
+        source_file, version = get_source_file_info()  # Use defaults from centralized constants
         print(f"✅ Found: {source_file.name}")
         print(f"✅ Version: {version}\n")
         
@@ -121,30 +137,39 @@ def main() -> None:
         
         print(f"\n📋 Final filename: {final_output_path.name}")
         
-        # Step 5: Copy the file (no conversion needed)
-        print("\n📄 Copying template...")
-        copy_success = copy_file_with_rename(source_file, final_output_path)
+        # Step 5: Copy the file to /tmp directory for processing (avoids OneDrive sync issues)
+        print("\n📄 Copying template to temporary workspace...")
+        
+        # Create temp path in /tmp directory - much faster and no sync conflicts
+        import tempfile
+        temp_dir = Path(tempfile.gettempdir())
+        temp_output_path = temp_dir / final_output_path.name
+        copy_success = copy_file_with_rename(source_file, temp_output_path)
         
         if not copy_success:
-            show_error_message("Copy Failed", "Unable to copy template file")
+            show_error_message("Copy Failed", "Unable to copy template file to temporary workspace")
             return
         
         # Step 6: FEATURE 005 - Enhanced data population (CLI + constants + Resource Setup)
         print("📋 Populating data from CLI inputs, constants, and Resource Setup...")
         
         # If .xlsb file, warn user about Excel launch
-        if final_output_path.suffix.lower() == '.xlsb':
+        if temp_output_path.suffix.lower() == '.xlsb':
             print("⏳ Opening Excel in background to modify .xlsb file...")
             print("   (This may trigger permission dialogs - please allow access)")
         
         try:
+            # Use centralized constants directory path
+            from src.constants import CONSTANTS_DIRECTORY
+            absolute_constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+            
             # Try consolidated Excel session approach first with automatic fallback
             population_summary = populate_spreadsheet_data_consolidated_session(
-                final_output_path, 
+                temp_output_path,  # Work on temporary file
                 CONSTANTS_FILENAME,
                 cli_result.as_dict,  # Feature 003: Include CLI data (backward compatibility)
                 margin_decimal,  # Feature 006: Include client margin
-                CONSTANTS_DIR_NAME,
+                str(absolute_constants_dir),  # Pass absolute path from centralized constant
                 FIELD_MATCH_THRESHOLD,
                 RESOURCE_SETUP_ENABLED,  # Feature 005: Include Resource Setup
                 True,  # Feature 006: Enable rate card calculation
@@ -152,9 +177,45 @@ def main() -> None:
             )
             show_population_feedback(population_summary)
             
+            # Step 6.5: Move completed file from /tmp to OneDrive (Excel is closed, safe to move)
+            print("📝 Moving completed file to OneDrive...")
+            try:
+                # Ensure OneDrive directory exists
+                final_output_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                # Move file from /tmp to OneDrive (atomic operation)
+                import shutil
+                shutil.move(str(temp_output_path), str(final_output_path))
+                print(f"✅ File moved to OneDrive: {final_output_path.name}")
+                
+                # Step 6.6: Open the final file in Excel for user access
+                print("📊 Opening completed file in Excel...")
+                try:
+                    import xlwings as xw
+                    app = xw.App(visible=True, add_book=False)
+                    workbook = app.books.open(final_output_path)
+                    print("✅ Excel opened with populated data")
+                except Exception as e:
+                    print(f"⚠️  File ready but could not auto-open in Excel: {e}")
+                    
+            except Exception as e:
+                print(f"⚠️  Warning: Could not move to OneDrive location: {e}")
+                print(f"   File is available in temp directory: {temp_output_path}")
+                # Don't update final_output_path - let user know where to find it
+            
         except Exception as e:
             print(f"📋 Skipping data population: {e}")
             print("📄 Spreadsheet copy successful, continuing with remaining steps...")
+            
+            # If population failed, still try to move the file to OneDrive
+            try:
+                final_output_path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil
+                shutil.move(str(temp_output_path), str(final_output_path))
+                print(f"✅ Template file moved to OneDrive: {final_output_path.name}")
+            except Exception as move_error:
+                print(f"⚠️  Could not move to OneDrive: {move_error}")
+                final_output_path = temp_output_path  # Use temp path for Finder
         
         # Step 7: Open in Finder
         print("🔍 Opening in Finder...")

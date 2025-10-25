@@ -71,8 +71,11 @@ def populate_spreadsheet_data(target_file: Path, constants_filename: str,
     logger.info("🚀 Starting spreadsheet data population...")
     
     try:
-        # Determine constants directory path
-        constants_dir = target_file.parent.parent / constants_dir_name
+        # Determine constants directory path - handle both absolute paths and relative names
+        if Path(constants_dir_name).is_absolute():
+            constants_dir = Path(constants_dir_name)
+        else:
+            constants_dir = target_file.parent.parent / constants_dir_name
         
         logger.info(f"📁 Constants directory: {constants_dir}")
         logger.info(f"📄 Target file: {target_file}")
@@ -323,8 +326,11 @@ def populate_spreadsheet_data_with_cli(target_file: Path, constants_filename: st
         logger.info(f"📋 CLI data: {get_cli_field_summary(cli_data)}")
     
     try:
-        # Determine constants directory path
-        constants_dir = target_file.parent.parent / constants_dir_name
+        # Determine constants directory path - handle both absolute paths and relative names
+        if Path(constants_dir_name).is_absolute():
+            constants_dir = Path(constants_dir_name)
+        else:
+            constants_dir = target_file.parent.parent / constants_dir_name
         
         logger.info(f"📁 Constants directory: {constants_dir}")
         logger.info(f"📄 Target file: {target_file}")
@@ -529,8 +535,11 @@ def populate_resource_setup_data(
     try:
         from resource_setup_populator import copy_resource_setup_range, get_resource_setup_summary
         
-        # Determine constants file path
-        constants_dir = target_file.parent.parent / constants_dir_name
+        # Determine constants file path - handle both absolute paths and relative names
+        if Path(constants_dir_name).is_absolute():
+            constants_dir = Path(constants_dir_name)
+        else:
+            constants_dir = target_file.parent.parent / constants_dir_name
         constants_file = constants_dir / constants_filename
         
         if not constants_file.exists():
@@ -857,7 +866,8 @@ def populate_spreadsheet_data_consolidated_session(
             field_match_threshold=field_match_threshold,
             enable_resource_setup=enable_resource_setup,
             enable_rate_card=enable_rate_card,
-            resource_row_count=resource_row_count
+            resource_row_count=resource_row_count,
+            keep_file_open=False  # Close Excel first, then we'll rename and reopen
         )
         
         # Check if consolidated approach actually worked
@@ -902,8 +912,15 @@ def populate_spreadsheet_data_consolidated_session(
         if consolidated_result.get("operations_completed", 0) < consolidated_result.get("total_operations", 0):
             warnings.append(f"Only {consolidated_result.get('operations_completed', 0)}/{consolidated_result.get('total_operations', 0)} operations completed")
         
+        # Fix constants_file_found logic: True if any constants were loaded OR any fields were populated
+        constants_found = (
+            data_pop and data_pop.get("success", False) or 
+            data_pop and data_pop.get("fields_populated", 0) > 0 or 
+            data_pop and data_pop.get("fields_matched", 0) > 0
+        )
+        
         summary = PopulationSummary(
-            constants_file_found=data_pop.get("success", False),
+            constants_file_found=constants_found,
             constants_loaded=len(cli_data or {}) + data_pop.get("fields_matched", 0),
             fields_matched=total_fields_matched,
             fields_populated=total_fields_populated,

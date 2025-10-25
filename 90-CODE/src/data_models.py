@@ -246,6 +246,20 @@ class PopulationOperation:
 
 
 @dataclass
+class FieldPopulationResult:
+    """Simple result of field population operations (used by excel_data_populator)"""
+    successful_fields: int = 0
+    failed_fields: int = 0
+    total_fields: int = 0
+    error_messages: List[str] = field(default_factory=list)
+    populated_fields: List[str] = field(default_factory=list)
+    
+    def __str__(self) -> str:
+        """Human-readable summary"""
+        return f"Populated {self.successful_fields}/{self.total_fields} fields ({self.successful_fields/self.total_fields*100:.1f}% success)" if self.total_fields > 0 else "No fields to populate"
+
+
+@dataclass 
 class PopulationResult:
     """Complete result of data population session"""
     constants_data: ConstantsData
@@ -457,7 +471,7 @@ class ValidationResult:
 class PopulationConfig:
     """Configuration for data population operations"""
     constants_filename: str = "lowcomplexity_const_KHv1.xlsx"
-    constants_directory: Path = Path("00-CONSTANTS")
+    constants_directory: Path = None  # Will use centralized constant if None
     target_sheet_name: str = "Pricing Setup"
     match_threshold: float = 0.65
     enable_population: bool = True
@@ -467,14 +481,27 @@ class PopulationConfig:
     @property
     def constants_file_path(self) -> Path:
         """Full path to constants file"""
-        return self.constants_directory / self.constants_filename
+        # Use centralized constant if none specified
+        if self.constants_directory is None:
+            from constants import CONSTANTS_DIRECTORY
+            constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+        else:
+            constants_dir = self.constants_directory
+        return constants_dir / self.constants_filename
     
     def validate(self) -> List[str]:
         """Validate configuration and return any issues"""
         issues = []
         
-        if not self.constants_directory.exists():
-            issues.append(f"Constants directory not found: {self.constants_directory}")
+        # Get the actual constants directory (with default handling)
+        if self.constants_directory is None:
+            from constants import CONSTANTS_DIRECTORY
+            constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+        else:
+            constants_dir = self.constants_directory
+        
+        if not constants_dir.exists():
+            issues.append(f"Constants directory not found: {constants_dir}")
         
         if not self.constants_file_path.exists():
             issues.append(f"Constants file not found: {self.constants_file_path}")

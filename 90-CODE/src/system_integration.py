@@ -10,10 +10,23 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from logging_config import configure_logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+
+# Global logger instance
 logger = logging.getLogger(__name__)
+
+
+def setup_production_logging(verbose_enabled: bool = False) -> None:
+    """
+    Replace existing logging.basicConfig() with production-aware configuration.
+    
+    Backward Compatibility Guarantee:
+    - All existing logger.info/warning/error calls continue to work
+    - No changes required to calling code
+    - Enhanced behavior is additive only
+    """
+    configure_logging(verbose_enabled=verbose_enabled)
 
 
 def open_file_in_finder(file_path: Path) -> bool:

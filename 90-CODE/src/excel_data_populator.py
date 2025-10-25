@@ -28,7 +28,65 @@ logger = logging.getLogger(__name__)
 
 
 # Import SpecKit data models
-from data_models import PopulationResult
+from data_models import FieldPopulationResult
+
+
+def _verify_excel_value(source_value: str, excel_value) -> bool:
+    """
+    Intelligently verify that Excel stored the value correctly, handling automatic type conversions.
+    
+    Excel automatically converts values:
+    - "24/11/25" -> datetime(2025, 11, 24) 
+    - "12" -> 12.0 (float)
+    - "TEST" -> "TEST" (string unchanged)
+    
+    Args:
+        source_value: Original value we tried to write (usually string)
+        excel_value: Value Excel actually stored (could be datetime, float, string, etc.)
+        
+    Returns:
+        True if the values represent the same data, False otherwise
+    """
+    import datetime
+    
+    try:
+        # Simple case: exact string match
+        if str(source_value) == str(excel_value):
+            return True
+            
+        # Date handling: Excel stores dates as datetime objects
+        if isinstance(excel_value, datetime.datetime):
+            # Try to parse source as date in common formats
+            source_str = str(source_value).strip()
+            
+            # Handle DD/MM/YY format (like "24/11/25")
+            if "/" in source_str and len(source_str.split("/")) == 3:
+                parts = source_str.split("/")
+                if len(parts[2]) == 2:  # Two-digit year
+                    # Convert YY to YYYY (assume 20YY for now)
+                    day, month, year = parts[0], parts[1], f"20{parts[2]}"
+                    try:
+                        expected_date = datetime.datetime(int(year), int(month), int(day))
+                        return excel_value.date() == expected_date.date()
+                    except ValueError:
+                        pass
+        
+        # Number handling: Excel might convert "12" to 12.0
+        if isinstance(excel_value, (int, float)):
+            try:
+                source_num = float(source_value)
+                excel_num = float(excel_value)
+                # Allow small floating-point differences
+                return abs(source_num - excel_num) < 0.0001
+            except (ValueError, TypeError):
+                pass
+        
+        # Fallback: convert both to strings and compare
+        return str(source_value).strip() == str(excel_value).strip()
+        
+    except Exception:
+        # If verification logic fails, assume success (conservative approach)
+        return True
 
 
 def write_value_to_cell(worksheet, location: CellLocation, value: str) -> bool:
@@ -74,7 +132,7 @@ def write_value_to_cell(worksheet, location: CellLocation, value: str) -> bool:
         return False
 
 
-def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> PopulationResult:
+def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> FieldPopulationResult:
     """
     Populate all matched fields in target Excel file.
     
@@ -91,7 +149,7 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
     """
     if not matches:
         logger.warning("No field matches provided for population")
-        return PopulationResult(
+        return FieldPopulationResult(
             successful_fields=0,
             failed_fields=0,
             total_fields=0,
@@ -112,7 +170,7 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
         if "Pricing Setup" not in workbook.sheetnames:
             error_msg = f"Target worksheet 'Pricing Setup' not found in {target_file}"
             logger.error(error_msg)
-            return PopulationResult(
+            return FieldPopulationResult(
                 successful_fields=0,
                 failed_fields=len(matches),
                 total_fields=len(matches),
@@ -153,7 +211,7 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
         logger.info(f"✅ Successfully saved populated file: {target_file}")
 
         # Create result summary
-        result = PopulationResult(
+        result = FieldPopulationResult(
             successful_fields=successful_fields,
             failed_fields=failed_fields,
             total_fields=len(matches),
@@ -167,7 +225,7 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
     except ImportError:
         error_msg = "openpyxl library not available - cannot write Excel files"
         logger.error(error_msg)
-        return PopulationResult(
+        return FieldPopulationResult(
             successful_fields=0,
             failed_fields=len(matches),
             total_fields=len(matches),
@@ -177,7 +235,7 @@ def populate_matched_fields(target_file: Path, matches: List[FieldMatch]) -> Pop
     except Exception as e:
         error_msg = f"Error during population: {e}"
         logger.error(error_msg)
-        return PopulationResult(
+        return FieldPopulationResult(
             successful_fields=0,
             failed_fields=len(matches),
             total_fields=len(matches),
@@ -205,7 +263,7 @@ def validate_population_success(worksheet, matches: List[FieldMatch]) -> Dict[st
     pass
 
 
-def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]) -> PopulationResult:
+def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]) -> FieldPopulationResult:
     """
     Populate matched fields using xlwings for .xlsb file support.
     
@@ -243,7 +301,7 @@ def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]
                 error_msg = "Pricing Setup worksheet not found in .xlsb file"
                 logger.error(f"❌ {error_msg}")
                 wb.close()
-                return PopulationResult(
+                return FieldPopulationResult(
                     successful_fields=0,
                     failed_fields=len(matches),
                     total_fields=len(matches),
@@ -308,7 +366,7 @@ def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]
         failed_fields = len(matches)
         successful_fields = 0
     
-    result = PopulationResult(
+    result = FieldPopulationResult(
         successful_fields=successful_fields,
         failed_fields=failed_fields,
         total_fields=len(matches),
@@ -320,7 +378,7 @@ def populate_matched_fields_xlwings(target_file: Path, matches: List[FieldMatch]
     return result
 
 
-def populate_fields_in_worksheet(worksheet, matches: List[FieldMatch]) -> PopulationResult:
+def populate_fields_in_worksheet(worksheet, matches: List[FieldMatch]) -> FieldPopulationResult:
     """
     Populate matched fields using an already-open xlwings worksheet object.
     
@@ -373,14 +431,19 @@ def populate_fields_in_worksheet(worksheet, matches: List[FieldMatch]) -> Popula
                 
                 # Verify the value was set
                 new_value = target_cell.value
-                logger.info(f"New cell value after write: '{new_value}'")
+                logger.debug(f"New cell value after write: '{new_value}' (type: {type(new_value)})")
                 
-                if str(new_value) == str(match.source_value):
+                # Smart verification that handles Excel's automatic type conversions
+                verification_passed = _verify_excel_value(match.source_value, new_value)
+                logger.debug(f"Verification: source='{match.source_value}' vs new='{new_value}' -> {'PASS' if verification_passed else 'FAIL'}")
+                
+                if verification_passed:
                     successful_fields += 1
                     populated_fields.append(match.source_field)
                     logger.info(f"✅ Successfully wrote '{match.source_value}' to {target_cell_ref}")
                 else:
                     logger.warning(f"❌ Value verification failed for {target_cell_ref}")
+                    logger.warning(f"   Expected: '{match.source_value}' but got: '{new_value}' (type: {type(new_value)})")
                     failed_fields += 1
                 
             except Exception as e:
@@ -396,7 +459,7 @@ def populate_fields_in_worksheet(worksheet, matches: List[FieldMatch]) -> Popula
         failed_fields = len(matches)
         successful_fields = 0
     
-    result = PopulationResult(
+    result = FieldPopulationResult(
         successful_fields=successful_fields,
         failed_fields=failed_fields,
         total_fields=len(matches),

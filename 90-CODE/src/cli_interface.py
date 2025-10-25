@@ -195,7 +195,7 @@ def prompt_for_field(field_name: str) -> CLIFieldValue:
                 # Use default value for fields with generators (like dates)
                 default_raw = config.default_generator()
                 default_value = default_raw.split(" (")[0]  # Extract just the date part
-                print(config.error_empty)
+                # Don't print error_empty for date fields - accepting default is normal
                 return CLIFieldValue(
                     field_name=field_name,
                     value=default_value,

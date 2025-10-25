@@ -98,12 +98,12 @@ def extract_version_from_filename(filename: str) -> str:
     return f"V{version}"
 
 
-def discover_template_file(source_dir: Path = Path("10-LATEST-PRICING-TOOLS")) -> SourceFile:
+def discover_template_file(source_dir: Path = None) -> SourceFile:
     """
     Discover and validate the Low Complexity template file in source directory.
     
     Args:
-        source_dir: Directory to search for template files
+        source_dir: Directory to search for template files (defaults to centralized constant)
         
     Returns:
         SourceFile: Validated template file with version information
@@ -120,6 +120,11 @@ def discover_template_file(source_dir: Path = Path("10-LATEST-PRICING-TOOLS")) -
         O(n) where n = number of files in source directory
         Expected: <100ms for typical directory sizes
     """
+    # Default to centralized constant if no source_dir provided
+    if source_dir is None:
+        from constants import PRICING_TOOL_SOURCE_DIRECTORY
+        source_dir = Path(PRICING_TOOL_SOURCE_DIRECTORY).expanduser()
+    
     try:
         # Use existing find_source_file logic
         template_path = find_source_file(source_dir, "Low Complexity")
@@ -280,12 +285,12 @@ def copy_file_with_metadata(source: SourceFile, destination: Path) -> OutputFile
         raise
 
 
-def get_source_file_info(source_dir: Path, pattern: str) -> tuple[Path, str]:
+def get_source_file_info(source_dir: Path = None, pattern: str = "Low Complexity") -> tuple[Path, str]:
     """
     Get source file path and extract version information.
     
     Args:
-        source_dir: Directory to search for source file
+        source_dir: Directory to search for source file (defaults to centralized constant)
         pattern: Pattern to match in filenames
         
     Returns:
@@ -301,6 +306,11 @@ def get_source_file_info(source_dir: Path, pattern: str) -> tuple[Path, str]:
         >>> print(f"File: {file_path.name}, Version: {version}")
         "File: FY26 Low Complexity Pricing Tool v1.2.xlsb, Version: V1.2"
     """
+    # Default to centralized constant if no source_dir provided
+    if source_dir is None:
+        from constants import PRICING_TOOL_SOURCE_DIRECTORY
+        source_dir = Path(PRICING_TOOL_SOURCE_DIRECTORY).expanduser()
+    
     source_file = find_source_file(source_dir, pattern)
     version = extract_version_from_filename(source_file.name)
     

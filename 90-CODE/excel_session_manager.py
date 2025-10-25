@@ -54,12 +54,13 @@ class ExcelSessionManager:
             session.save()  # Optional intermediate save
     """
     
-    def __init__(self, file_path: Path):
+    def __init__(self, file_path: Path, keep_file_open: bool = False):
         """
         Initialize Excel session manager.
         
         Args:
             file_path: Path to Excel file to manage
+            keep_file_open: If True, save but don't close file on exit (leaves Excel open)
             
         Raises:
             ExcelSessionError: If xlwings not available or file not found
@@ -71,6 +72,7 @@ class ExcelSessionManager:
             raise ExcelSessionError(f"Excel file not found: {file_path}")
         
         self.file_path = file_path
+        self.keep_file_open = keep_file_open
         self.app = None
         self.workbook = None
         self.worksheets = {}
@@ -96,7 +98,7 @@ class ExcelSessionManager:
             raise ExcelSessionError(f"Failed to open Excel session: {str(e)}")
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Save and close Excel file."""
+        """Save and optionally close Excel file."""
         if exc_type:
             logger.warning(f"Excel session exiting with error: {exc_val}")
         
@@ -104,19 +106,40 @@ class ExcelSessionManager:
             if self.workbook and self._is_open:
                 logger.info("💾 Saving Excel file...")
                 self.workbook.save()
-                self.workbook.close()
-                logger.info("✅ Excel file saved and closed")
+                
+                if self.keep_file_open:
+                    # Make Excel visible and bring to front for user access
+                    try:
+                        self.app.visible = True
+                        # Try to activate, but don't fail if it doesn't work
+                        try:
+                            self.app.activate()
+                        except:
+                            pass  # Activation can fail, but visibility is what matters
+                        logger.info("✅ Excel file saved and left open for user access")
+                    except Exception as e:
+                        logger.warning(f"Excel saved but visibility failed: {e}")
+                        logger.info("✅ Excel file saved (visibility may need manual activation)")
+                else:
+                    self.workbook.close()
+                    logger.info("✅ Excel file saved and closed")
         except Exception as e:
             logger.error(f"Error saving Excel file: {e}")
         
-        try:
-            if self.app:
-                self.app.quit()
-                logger.info("✅ Excel application closed")
-        except Exception as e:
-            logger.error(f"Error closing Excel application: {e}")
+        # Only quit Excel app if we're not keeping file open
+        if not self.keep_file_open:
+            try:
+                if self.app:
+                    self.app.quit()
+                    logger.info("✅ Excel application closed")
+            except Exception as e:
+                logger.error(f"Error closing Excel application: {e}")
+        else:
+            logger.info("📊 Excel application left running with file open")
         
-        self._is_open = False
+        # Update state appropriately
+        if not self.keep_file_open:
+            self._is_open = False
     
     def get_worksheet(self, name: str):
         """
@@ -197,7 +220,8 @@ def consolidated_data_population(
     field_match_threshold: float = 0.65,
     enable_resource_setup: bool = True,
     enable_rate_card: bool = True,
-    resource_row_count: int = 7
+    resource_row_count: int = 7,
+    keep_file_open: bool = False
 ) -> Dict[str, Any]:
     """
     Consolidated data population using single Excel session.
@@ -220,6 +244,7 @@ def consolidated_data_population(
         enable_resource_setup: Whether to perform resource setup copying
         enable_rate_card: Whether to perform rate card calculation
         resource_row_count: Number of resource rows to copy
+        keep_file_open: If True, save and leave Excel file open for user access
         
     Returns:
         Dictionary containing results from all operations
@@ -272,7 +297,7 @@ def consolidated_data_population(
     
     try:
         # Single Excel session for all operations
-        with ExcelSessionManager(target_file) as session:
+        with ExcelSessionManager(target_file, keep_file_open=keep_file_open) as session:
             
             # Step 1: Data Population (constants + CLI)
             logger.info("📋 Step 1: Populating data fields...")
@@ -371,7 +396,7 @@ def consolidated_data_population(
     
     try:
         # Single Excel session for all operations
-        with ExcelSessionManager(target_file) as session:
+        with ExcelSessionManager(target_file, keep_file_open=keep_file_open) as session:
             
             # Step 1: Data Population (constants + CLI)
             logger.info("📋 Step 1: Populating data fields...")
