@@ -4,6 +4,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-25
 
 ## Active Technologies
 - Python 3.11+ (using #!/usr/bin/env python3 shebang) + Standard logging library, existing codebase modules (no external dependencies) (007-productionize-cli-output)
+- Python 3.11+ (existing codebase requirement) + Python standard library only (os.path, pathlib, shlex for shell escaping) (008-implement-shell-alias)
+- ~/.zshrc file modification with comment markers for identification (008-implement-shell-alias)
 
 ## Project Structure
 ```
@@ -18,6 +20,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+ (using #!/usr/bin/env python3 shebang): Follow standard conventions
 
 ## Recent Changes
+- 008-implement-shell-alias: Added Python 3.11+ (existing codebase requirement) + Python standard library only (os.path, pathlib, shlex for shell escaping)
 - 007-productionize-cli-output: Added Python 3.11+ (using #!/usr/bin/env python3 shebang) + Standard logging library, existing codebase modules (no external dependencies)
 
 <!-- MANUAL ADDITIONS START -->
