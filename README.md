@@ -12,22 +12,73 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 - 💰 Calculating rate cards with client margins
 - 🔍 Opening completed files in Excel and Finder
 
-## Quick Start
+**✨ After first-time setup, just type `priceup` from anywhere to use the tool!**
 
-1. **Run the application:**
+## Getting Started
+
+### For Git Beginners (First-Time Setup)
+
+**What is Git?** Git is a tool for downloading and managing code projects. Don't worry - you only need these simple steps to get the pricing tool on your computer.
+
+#### Step 1: Download the Tool
+
+1. **Open Terminal** (found in Applications > Utilities on Mac)
+2. **Navigate to your desired location** (choose where you want the tool):
+   ```bash
+   cd ~/Desktop  # Downloads to your Desktop
+   # OR
+   cd ~/Documents  # Downloads to your Documents folder
+   ```
+3. **Download the pricing tool**:
+   ```bash
+   git clone https://github.com/your-org/dtt-pricing-tools-populator.git
+   ```
+4. **Enter the downloaded folder**:
+   ```bash
+   cd dtt-pricing-tools-populator
+   ```
+
+#### Step 2: First-Time Setup
+
+1. **Run the tool once** (this creates the easy 'priceup' shortcut):
    ```bash
    python3 pricing_tool_accelerator.py
    ```
 
-2. **Follow the prompts:**
+2. **Follow the setup prompts** - the tool will:
+   - Create a convenient 'priceup' command for future use
+   - Show you a success message when ready
+   - Guide you through your first pricing tool creation
+
+3. **Open a new terminal window** to activate the shortcut
+
+### Everyday Usage (After First-Time Setup)
+
+Once you've completed the first-time setup above, using the pricing tool is simple:
+
+1. **Open Terminal** from anywhere on your computer
+2. **Type the magic command:**
+   ```bash
+   priceup
+   ```
+3. **Follow the prompts:**
    - Enter client name and opportunity details
    - Specify project duration and margin
    - System handles the rest automatically
 
-3. **Results:**
+4. **Results:**
    - Completed pricing tool opens in Excel
    - File saved to OneDrive shared location
    - All team members have access
+
+### Alternative Download (If Git Doesn't Work)
+
+If you cannot use git or prefer not to:
+
+1. **Download as ZIP**: Visit the repository webpage and click "Download ZIP"
+2. **Extract the ZIP file** to your desired location
+3. **Follow Step 2 above** for first-time setup
+4. **Note**: You'll need to manually download updates instead of using git
 
 ## Features
 
@@ -66,12 +117,44 @@ PRICING_TOOL_SOURCE_DIRECTORY = '~/Library/CloudStorage/OneDrive-SharedLibraries
 OUTPUT_DIRECTORY = '~/Library/CloudStorage/OneDrive-SharedLibraries-Deloitte(...)/20-OUTPUT/'
 ```
 
+## Troubleshooting
+
+### Common Setup Issues
+
+**Problem**: "zsh required" error message  
+**Solution**: Switch your terminal to use zsh (the modern Mac shell):
+```bash
+chsh -s /bin/zsh
+```
+Then restart Terminal and try again.
+
+**Problem**: Permission denied when creating shortcut  
+**Solution**: Manual alias setup (copy and paste this command):
+```bash
+echo "alias priceup='python3 $(pwd)/pricing_tool_accelerator.py'" >> ~/.zshrc
+```
+Then restart Terminal.
+
+**Problem**: "git: command not found"  
+**Solution**: Either:
+- Install git using: `xcode-select --install`
+- OR use the "Alternative Download" method above
+
+**Problem**: 'priceup' command not found after setup  
+**Solution**: 
+1. Make sure you opened a **new** terminal window after first-time setup
+2. If still not working, try the manual setup command above
+
+**Problem**: Tool runs but can't find pricing templates  
+**Solution**: Make sure you have access to the OneDrive shared libraries and they are synced to your computer.
+
 ## System Requirements
 
 - Python 3.11+
 - Microsoft Excel (for .xlsb file processing)
 - OneDrive sync enabled
-- macOS (for Finder integration)
+- macOS with zsh shell (default on modern Macs)
+- Terminal access
 
 ## Performance
 
