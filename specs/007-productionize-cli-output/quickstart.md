@@ -40,7 +40,7 @@ VERBOSE_LOGGING_ENABLED = False  # Production mode by default
 
 ### Step 2: Create Logging Configuration Module
 ```python
-# New file: 90-CODE/src/logging_config.py
+# New file: src/logging_config.py
 def setup_production_logging(verbose_enabled: bool = False) -> None:
     """Configure logging for production or verbose mode."""
     
@@ -50,7 +50,7 @@ def get_message_category(message: str, context: str = "") -> MessageCategory:
 
 ### Step 3: Enhance System Integration
 ```python
-# Modify 90-CODE/src/system_integration.py
+# Modify src/system_integration.py
 # Replace: logging.basicConfig(level=logging.INFO)
 # With: setup_production_logging(VERBOSE_LOGGING_ENABLED)
 ```
@@ -88,14 +88,14 @@ test_backward_compatibility()  # Existing tests still pass
 ## File Changes Summary
 
 ### New Files
-- `90-CODE/src/logging_config.py` - Centralized logging configuration
-- `90-CODE/tests/test_logging_config.py` - Unit tests for logging system
+- `src/logging_config.py` - Centralized logging configuration
+- `tests/test_logging_config.py` - Unit tests for logging system
 
 ### Modified Files  
-- `90-CODE/pricing_tool_accelerator.py` - Add global configuration constant
-- `90-CODE/src/system_integration.py` - Replace basic logging with custom handler
-- `90-CODE/src/data_population_orchestrator.py` - Add message classification hints
-- `90-CODE/tests/test_cli_integration.py` - Test both output modes
+- `pricing_tool_accelerator.py` - Add global configuration constant
+- `src/system_integration.py` - Replace basic logging with custom handler
+- `src/data_population_orchestrator.py` - Add message classification hints
+- `tests/test_cli_integration.py` - Test both output modes
 
 ### Unchanged Files
 - All existing module interfaces remain identical

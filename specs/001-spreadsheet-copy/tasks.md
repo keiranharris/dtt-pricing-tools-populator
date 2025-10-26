@@ -81,9 +81,9 @@ This document breaks down the implementation plan into specific, actionable task
 **Objective**: Set up the modular code structure and empty module files
 
 **Actions**:
-- [x] Create `90-CODE/src/` directory structure
+- [x] Create `src/` directory structure
 - [x] Create empty module files with proper `__init__.py`
-- [x] Create `90-CODE/tests/` directory structure  
+- [x] Create `tests/` directory structure  
 - [x] Set up basic `pricing_tool_accelerator.py` entry point
 - [x] Create `pyproject.toml` or `requirements.txt` for dependencies
 

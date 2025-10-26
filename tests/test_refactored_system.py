@@ -186,7 +186,7 @@ def main():
     if passed == total:
         print("🎉 All tests passed! System is ready for use.")
         print("\n✅ You can now safely run the main application:")
-        print("   cd 90-CODE && python pricing_tool_accelerator.py")
+        print("   python pricing_tool_accelerator.py")
         return True
     else:
         print("❌ Some tests failed. Please review the errors above.")

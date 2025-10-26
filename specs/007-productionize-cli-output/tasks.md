@@ -14,9 +14,9 @@
 
 **Purpose**: Project initialization and logging infrastructure foundation
 
-- [x] T001 Add global configuration constant `VERBOSE_LOGGING_ENABLED = False` to 90-CODE/pricing_tool_accelerator.py
-- [x] T002 [P] Create new logging configuration module 90-CODE/src/logging_config.py with core interfaces
-- [x] T003 [P] Create MessageCategory enum and LoggingConfig dataclass in 90-CODE/src/logging_config.py
+- [x] T001 Add global configuration constant `VERBOSE_LOGGING_ENABLED = False` to pricing_tool_accelerator.py
+- [x] T002 [P] Create new logging configuration module src/logging_config.py with core interfaces
+- [x] T003 [P] Create MessageCategory enum and LoggingConfig dataclass in src/logging_config.py
 
 ---
 
@@ -26,12 +26,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [x] T004 Implement `configure_logging()` function in 90-CODE/src/logging_config.py
-- [x] T005 [P] Implement `categorize_message()` function in 90-CODE/src/logging_config.py
-- [x] T006 [P] Implement `should_display_message()` function in 90-CODE/src/logging_config.py
-- [x] T007 Create `ProductionOutputHandler` custom logging handler class in 90-CODE/src/logging_config.py
-- [x] T008 Replace `logging.basicConfig()` in 90-CODE/src/system_integration.py with production logging setup
-- [x] T009 [P] Create unit tests for logging configuration in 90-CODE/tests/test_logging_config.py
+- [x] T004 Implement `configure_logging()` function in src/logging_config.py
+- [x] T005 [P] Implement `categorize_message()` function in src/logging_config.py
+- [x] T006 [P] Implement `should_display_message()` function in src/logging_config.py
+- [x] T007 Create `ProductionOutputHandler` custom logging handler class in src/logging_config.py
+- [x] T008 Replace `logging.basicConfig()` in src/system_integration.py with production logging setup
+- [x] T009 [P] Create unit tests for logging configuration in tests/test_logging_config.py
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -45,11 +45,11 @@
 
 ### Implementation for User Story 1
 
-- [x] T010 [P] [US1] Update logging calls in 90-CODE/src/data_population_orchestrator.py to use message categorization
-- [x] T011 [P] [US1] Classify all logger.info() calls in 90-CODE/src/excel_data_populator.py as TECHNICAL_DIAGNOSTIC
-- [x] T012 [P] [US1] Classify all logger.info() calls in 90-CODE/src/field_matcher.py as TECHNICAL_DIAGNOSTIC  
-- [x] T013 [P] [US1] Add operation status messages (OPERATION_STATUS category) to major operations in 90-CODE/src/data_population_orchestrator.py
-- [x] T014 [US1] Initialize production logging in 90-CODE/pricing_tool_accelerator.py main() function
+- [x] T010 [P] [US1] Update logging calls in src/data_population_orchestrator.py to use message categorization
+- [x] T011 [P] [US1] Classify all logger.info() calls in src/excel_data_populator.py as TECHNICAL_DIAGNOSTIC
+- [x] T012 [P] [US1] Classify all logger.info() calls in src/field_matcher.py as TECHNICAL_DIAGNOSTIC  
+- [x] T013 [P] [US1] Add operation status messages (OPERATION_STATUS category) to major operations in src/data_population_orchestrator.py
+- [x] T014 [US1] Initialize production logging in pricing_tool_accelerator.py main() function
 - [x] T015 [US1] Ensure all existing print() statements remain unchanged (ESSENTIAL_USER category)
 - [x] T016 [US1] Verify error and warning messages always display regardless of verbose setting
 
@@ -65,12 +65,12 @@
 
 ### Implementation for User Story 2
 
-- [x] T017 [P] [US2] Implement `toggle_verbose_logging()` function in 90-CODE/src/logging_config.py
-- [x] T018 [P] [US2] Implement `is_verbose_enabled()` function in 90-CODE/src/logging_config.py
+- [x] T017 [P] [US2] Implement `toggle_verbose_logging()` function in src/logging_config.py
+- [x] T018 [P] [US2] Implement `is_verbose_enabled()` function in src/logging_config.py
 - [x] T019 [US2] Add runtime configuration update to `ProductionOutputHandler.update_verbose_setting()` 
 - [x] T020 [P] [US2] Ensure all existing technical logging displays when verbose mode enabled
 - [x] T021 [US2] Test configuration change takes effect within 1 second (meets SC-004)
-- [x] T022 [P] [US2] Add integration tests in 90-CODE/tests/test_cli_integration.py for verbose mode
+- [x] T022 [P] [US2] Add integration tests in tests/test_cli_integration.py for verbose mode
 
 **Checkpoint**: Verbose mode toggle working, full backward compatibility with existing detailed logging
 
@@ -84,10 +84,10 @@
 
 ### Implementation for User Story 3
 
-- [x] T023 [P] [US3] Add operation start messages to file copying in 90-CODE/src/file_operations.py
-- [x] T024 [P] [US3] Add operation completion messages to data population in 90-CODE/src/data_population_orchestrator.py
-- [x] T025 [P] [US3] Add operation status messages to resource setup in 90-CODE/src/resource_setup_populator.py
-- [x] T026 [P] [US3] Add operation status messages to rate card integration in 90-CODE/src/excel_rate_integration.py
+- [x] T023 [P] [US3] Add operation start messages to file copying in src/file_operations.py
+- [x] T024 [P] [US3] Add operation completion messages to data population in src/data_population_orchestrator.py
+- [x] T025 [P] [US3] Add operation status messages to resource setup in src/resource_setup_populator.py
+- [x] T026 [P] [US3] Add operation status messages to rate card integration in src/excel_rate_integration.py
 - [x] T027 [US3] Ensure status messages display in both verbose and production modes
 - [x] T028 [P] [US3] Add progress indicators for long-running operations (data population, file copying)
 

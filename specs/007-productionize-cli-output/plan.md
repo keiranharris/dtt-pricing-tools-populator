@@ -66,21 +66,20 @@ specs/[###-feature]/
 -->
 
 ```
-90-CODE/
-├── src/
-│   ├── cli_interface.py           # Enhanced: Add production output mode
-│   ├── system_integration.py      # Enhanced: Centralized logging config
-│   ├── data_population_orchestrator.py  # Enhanced: Conditional verbose logging
-│   ├── logging_config.py          # NEW: Global logging configuration
-│   └── [existing modules...]      # Enhanced: Use centralized logging
-├── tests/
-│   ├── test_logging_config.py     # NEW: Unit tests for logging configuration
-│   ├── test_cli_integration.py    # Enhanced: Test both output modes
-│   └── [existing tests...]        # Enhanced: Verify logging behavior
-└── pricing_tool_accelerator.py    # Enhanced: Initialize logging configuration
+src/
+├── cli_interface.py           # Enhanced: Add production output mode
+├── system_integration.py      # Enhanced: Centralized logging config
+├── data_population_orchestrator.py  # Enhanced: Conditional verbose logging
+├── logging_config.py          # NEW: Global logging configuration
+└── [existing modules...]      # Enhanced: Use centralized logging
+tests/
+├── test_logging_config.py     # NEW: Unit tests for logging configuration
+├── test_cli_integration.py    # Enhanced: Test both output modes
+└── [existing tests...]        # Enhanced: Verify logging behavior
+pricing_tool_accelerator.py    # Enhanced: Initialize logging configuration
 ```
 
-**Structure Decision**: Single project enhancement following existing 90-CODE/ structure. New logging configuration module added to src/ directory with enhancements to existing modules for centralized logging control. Maintains current directory organization while adding minimal new components.
+**Structure Decision**: Single project enhancement following existing src/ structure. New logging configuration module added to src/ directory with enhancements to existing modules for centralized logging control. Maintains current directory organization while adding minimal new components.
 
 ## Complexity Tracking
 

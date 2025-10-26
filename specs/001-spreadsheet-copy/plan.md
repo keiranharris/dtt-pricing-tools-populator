@@ -48,7 +48,7 @@ specs/001-spreadsheet-copy/
 ### Source Code (repository root)
 
 ```
-90-CODE/
+
 ├── pricing_tool_accelerator.py  # Main CLI entry point
 ├── src/
 │   ├── __init__.py

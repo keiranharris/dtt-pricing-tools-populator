@@ -175,7 +175,7 @@ except ExcelSessionError:
 - ✅ Compatibility with existing workflow
 
 ### Test Script:
-Run `90-CODE/test_consolidated_session.py` to validate implementation.
+Run `test_consolidated_session.py` in the root directory to validate implementation.
 
 ## Migration Notes
 

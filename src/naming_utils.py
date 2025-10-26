@@ -6,6 +6,7 @@ and collision handling, following the project constitution principles.
 """
 
 import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -43,10 +44,32 @@ def sanitize_user_input(text: str) -> str:
     return sanitized.strip()
 
 
+def get_current_username() -> str:
+    """
+    Get the current system username using the 'whoami' command.
+    
+    Returns:
+        str: Current username, or 'unknown' if unable to determine
+        
+    Example:
+        >>> get_current_username()  # doctest: +SKIP
+        'keharris'
+    """
+    try:
+        result = subprocess.run(['whoami'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            return result.stdout.strip()
+        else:
+            return 'unknown'
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
+        return 'unknown'
+
+
 def generate_output_filename(
     date: str, 
     client: str, 
     gig: str, 
+    username: str, 
     version: str
 ) -> str:
     """
@@ -56,16 +79,17 @@ def generate_output_filename(
         date: Date in YYYYMMDD format
         client: Client name (should be pre-sanitized)
         gig: Gig/project name (should be pre-sanitized)
+        username: Username of the person creating the file
         version: Version string (e.g., "V1.2")
         
     Returns:
         Formatted filename string
         
     Example:
-        >>> generate_output_filename("20251012", "Acme Corp", "Digital Transform", "V1.2")
-        "20251012 - Acme Corp - Digital Transform - (LowCompV1.2).xlsb"
+        >>> generate_output_filename("20251012", "Acme Corp", "Digital Transform", "keharris", "V1.2")
+        "20251012 - Acme Corp - Digital Transform - keharris - (LowCompV1.2).xlsb"
     """
-    return f"{date} - {client} - {gig} - (LowComp{version}).xlsb"
+    return f"{date} - {client} - {gig} - {username} - (LowComp{version}).xlsb"
 
 
 def generate_output_filename_from_models(
@@ -101,6 +125,7 @@ def generate_output_filename_from_models(
         date=date_str,
         client=user_input.client_name,
         gig=user_input.gig_name,
+        username=get_current_username(),
         version=source_file.version_number
     )
 

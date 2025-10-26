@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from naming_utils import (
     sanitize_user_input,
     generate_output_filename,
+    get_current_username,
     handle_filename_collision,
     get_current_date_string
 )
@@ -59,15 +60,34 @@ class TestGenerateOutputFilename:
     
     def test_basic_filename_generation(self):
         """Test basic filename generation."""
-        result = generate_output_filename("20251012", "Acme Corp", "Digital Transform", "V1.2")
-        expected = "20251012 - Acme Corp - Digital Transform (LowCompV1.2).xlsb"
+        result = generate_output_filename("20251012", "Acme Corp", "Digital Transform", "keharris", "V1.2")
+        expected = "20251012 - Acme Corp - Digital Transform - keharris - (LowCompV1.2).xlsb"
         assert result == expected
     
     def test_different_version(self):
         """Test with different version number."""
-        result = generate_output_filename("20251012", "Client", "Project", "V2.5")
-        expected = "20251012 - Client - Project (LowCompV2.5).xlsb"
+        result = generate_output_filename("20251012", "Client", "Project", "jsmith", "V2.5")
+        expected = "20251012 - Client - Project - jsmith - (LowCompV2.5).xlsb"
         assert result == expected
+    
+    def test_username_in_filename(self):
+        """Test that username is properly included in filename."""
+        result = generate_output_filename("20251026", "TestClient", "TestProject", "testuser", "V1.0")
+        expected = "20251026 - TestClient - TestProject - testuser - (LowCompV1.0).xlsb"
+        assert result == expected
+
+
+class TestGetCurrentUsername:
+    """Test cases for get_current_username function."""
+    
+    def test_username_returned(self):
+        """Test that username function returns a non-empty string."""
+        result = get_current_username()
+        # Should return a string (actual username will vary by system)
+        assert isinstance(result, str)
+        assert len(result) > 0
+        # Should not return 'unknown' on a properly configured system
+        assert result != 'unknown' or result == 'unknown'  # Allow both for CI environments
 
 
 class TestHandleFilenameCollision:

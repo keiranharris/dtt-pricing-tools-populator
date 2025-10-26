@@ -51,7 +51,7 @@ specs/[###-feature]/
 ### Source Code (repository root)
 
 ```
-90-CODE/
+
 ├── src/
 │   ├── cli_interface.py           # EXTEND: Add margin percentage input
 │   ├── data_population_orchestrator.py  # EXTEND: Add rate calculation step  
@@ -94,7 +94,7 @@ ios/ or android/
 └── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single project extension using existing 90-CODE/ structure with new modules for rate calculation logic
+**Structure Decision**: Single project extension using existing  structure with new modules for rate calculation logic
 
 ## Implementation Notes
 

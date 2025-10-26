@@ -50,7 +50,7 @@ VERBOSE_LOGGING_ENABLED = False                       # Production mode by defau
 
 from src.cli_interface import collect_user_inputs, collect_cli_fields, collect_margin_percentage
 from src.file_operations import get_source_file_info, copy_file_with_rename
-from src.naming_utils import generate_output_filename, get_current_date_string, handle_filename_collision
+from src.naming_utils import generate_output_filename, get_current_date_string, get_current_username, handle_filename_collision
 from src.system_integration import (
     open_file_in_finder, 
     show_success_message, 
@@ -71,12 +71,69 @@ from src.data_population_orchestrator import populate_spreadsheet_data_with_cli_
 from src.data_population_orchestrator import populate_spreadsheet_data_with_cli_resources_and_rates, populate_spreadsheet_data_consolidated_session
 
 
+def setup_shell_alias_if_needed() -> bool:
+    """
+    Set up shell alias for easy access if needed.
+    
+    This function attempts to set up a shell alias ('priceup') that allows
+    users to run this tool from anywhere. It operates silently and never
+    raises exceptions that would interrupt the main application.
+    
+    Returns:
+        bool: True to continue main app execution (always returns True)
+    """
+    try:
+        # Only attempt if we're in an interactive shell environment
+        import os
+        if not os.environ.get('SHELL'):
+            return True  # Not in a shell, skip silently
+        
+        # Import shell alias functionality
+        from src.shell_alias_manager import ShellAliasManager, AliasSetupRequest
+        from src.shell_alias_constants import DEFAULT_ALIAS_NAME
+        
+        # Create manager and setup request
+        manager = ShellAliasManager()
+        request = AliasSetupRequest(alias_name=DEFAULT_ALIAS_NAME)
+        
+        # Attempt alias setup
+        result = manager.setup_alias(request)
+        
+        # Handle results with appropriate messaging
+        if result.success:
+            print(f"✅ Shell alias '{result.alias_name}' set up successfully!")
+            print("   You can now run 'priceup' from anywhere to access this tool.")
+            print("   Restart your terminal or run 'source ~/.zshrc' to activate.\n")
+        elif result.already_exists:
+            # Alias exists - silent operation (no message needed)
+            pass
+        else:
+            # Setup failed - show manual instructions in verbose mode only
+            if VERBOSE_LOGGING_ENABLED:
+                print(f"⚠️  Could not auto-setup shell alias: {result.message}")
+                print("   You can manually add this alias to your ~/.zshrc:")
+                print(f"   alias {request.alias_name}='python3 {request.target_script_path}'")
+                print("   Then run 'source ~/.zshrc' to activate.\n")
+        
+        return True
+        
+    except Exception as e:
+        # Never let alias setup interrupt the main application
+        if VERBOSE_LOGGING_ENABLED:
+            print(f"⚠️  Shell alias setup failed: {str(e)}")
+            print("   Continuing with main application...\n")
+        return True
+
+
 def main() -> None:
     """Main entry point for the pricing tool accelerator."""
     
     # Feature 007: Initialize production logging system
     from src.system_integration import setup_production_logging
     setup_production_logging(verbose_enabled=VERBOSE_LOGGING_ENABLED)
+    
+    # Feature 008: Shell alias auto-setup for easy access
+    setup_shell_alias_if_needed()
     
     print("🚀 DTT Pricing Tool Accelerator v1.0.0")
     print("   Automating pricing tool spreadsheet setup...")
@@ -126,7 +183,8 @@ def main() -> None:
         
         # Step 3: Generate output filename  
         current_date = get_current_date_string()
-        base_filename = generate_output_filename(current_date, client_name, gig_name, version)
+        current_username = get_current_username()
+        base_filename = generate_output_filename(current_date, client_name, gig_name, current_username, version)
         base_output_path = output_dir / base_filename
         
         # Step 4: Handle filename collisions

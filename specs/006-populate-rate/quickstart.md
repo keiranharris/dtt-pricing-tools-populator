@@ -26,14 +26,14 @@ This feature extends the existing pricing tool automation to collect client marg
 ### 1. Create New Modules
 ```bash
 # Create rate calculation module
-touch 90-CODE/src/rate_card_calculator.py
+touch src/rate_card_calculator.py
 
 # Create input validation module  
-touch 90-CODE/src/margin_validator.py
+touch src/margin_validator.py
 
 # Create test files
-touch 90-CODE/tests/test_rate_card_calculator.py
-touch 90-CODE/tests/test_margin_validator.py
+touch tests/test_rate_card_calculator.py
+touch tests/test_margin_validator.py
 ```
 
 ### 2. Implement Core Functions
@@ -49,13 +49,13 @@ touch 90-CODE/tests/test_margin_validator.py
 
 ```bash
 # Run unit tests for calculation logic
-python -m pytest 90-CODE/tests/test_rate_card_calculator.py -v
+python -m pytest tests/test_rate_card_calculator.py -v
 
 # Run integration tests with mock Excel data
-python -m pytest 90-CODE/tests/test_margin_validator.py -v
+python -m pytest tests/test_margin_validator.py -v
 
 # Test full workflow integration
-python 90-CODE/pricing_tool_accelerator.py
+python pricing_tool_accelerator.py
 ```
 
 ## Usage Example

@@ -110,7 +110,7 @@ After successful copy, the system automatically:
 
 ### Module Structure
 ```
-90-CODE/
+
 ├── pricing_tool_accelerator.py    # Main CLI entry point
 └── src/
     ├── file_operations.py         # File discovery and copying
@@ -158,7 +158,7 @@ def open_in_finder(file_path: Path) -> bool
 ### Automated Testing
 
 ```bash
-cd 90-CODE
+cd .
 python -m pytest tests/ -v
 ```
 
