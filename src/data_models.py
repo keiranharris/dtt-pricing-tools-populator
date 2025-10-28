@@ -483,8 +483,8 @@ class PopulationConfig:
         """Full path to constants file"""
         # Use centralized constant if none specified
         if self.constants_directory is None:
-            from constants import CONSTANTS_DIRECTORY
-            constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+            from constants import get_constants_directory
+            constants_dir = Path(get_constants_directory()).expanduser()
         else:
             constants_dir = self.constants_directory
         return constants_dir / self.constants_filename
@@ -495,8 +495,8 @@ class PopulationConfig:
         
         # Get the actual constants directory (with default handling)
         if self.constants_directory is None:
-            from constants import CONSTANTS_DIRECTORY
-            constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+            from constants import get_constants_directory
+            constants_dir = Path(get_constants_directory()).expanduser()
         else:
             constants_dir = self.constants_directory
         

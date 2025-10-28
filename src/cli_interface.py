@@ -402,7 +402,7 @@ def collect_margin_percentage() -> float:
     """
     Collect client margin percentage from user with validation and retry logic.
     
-    Prompts user for margin percentage (35-65%) with validation loop.
+    Prompts user for margin percentage with validation loop.
     Continues prompting until valid input is provided.
     
     Returns:
@@ -410,37 +410,30 @@ def collect_margin_percentage() -> float:
         
     Example:
         >>> margin = collect_margin_percentage()
-        Enter client margin percentage (35-65%):
+        Enter client margin percentage:
           Examples: 45, 45%, 42.5, 42.5%
-          Range: 35% to 65% inclusive
+          Must be a positive percentage
         Margin: 45%
         >>> print(margin)  # 0.45
     """
-    print("\n📊 Client Margin Configuration")
-    print("=" * 40)
-    
     while True:
         try:
             # Get user input
-            user_input = input(get_margin_prompt_text()).strip()
+            user_input = input("Client Margin %: ").strip()
             
             # Validate input
             result = validate_margin_input(user_input)
             
             if result.is_valid:
-                # Success - show confirmation and return
-                margin_pct = result.decimal_value * 100
-                print(f"✅ Confirmed: {margin_pct:.1f}% client margin")
+                # Success - return without confirmation message
                 return result.decimal_value
             else:
-                # Invalid input - show error and retry
-                print(get_margin_error_help())
-                print(f"🔄 Please try again...")
+                # Invalid input - show simple error and retry
+                print("❌ Invalid percentage. Try again:")
                 
         except KeyboardInterrupt:
             print("\n\n⚠️  Operation cancelled by user")
             raise
         except Exception as e:
-            print(f"\n❌ Unexpected error: {e}")
-            print("🔄 Please try again...")
+            print(f"❌ Error: {e}. Try again:")
             continue

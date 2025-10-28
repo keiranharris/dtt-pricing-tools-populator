@@ -308,8 +308,8 @@ def get_source_file_info(source_dir: Path = None, pattern: str = "Low Complexity
     """
     # Default to centralized constant if no source_dir provided
     if source_dir is None:
-        from constants import PRICING_TOOL_SOURCE_DIRECTORY
-        source_dir = Path(PRICING_TOOL_SOURCE_DIRECTORY).expanduser()
+        from constants import get_pricing_tool_source_directory
+        source_dir = Path(get_pricing_tool_source_directory()).expanduser()
     
     source_file = find_source_file(source_dir, pattern)
     version = extract_version_from_filename(source_file.name)

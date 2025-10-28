@@ -125,8 +125,195 @@ def setup_shell_alias_if_needed() -> bool:
         return True
 
 
+def setup_onedrive_paths_if_needed(force_reconfigure: bool = False) -> bool:
+    """
+    Set up OneDrive path configuration if needed.
+    
+    This function checks if OneDrive paths are configured and runs the
+    setup wizard if not. It handles first-time setup gracefully and
+    provides helpful error messages for configuration issues.
+    
+    Returns:
+        bool: True to continue main app execution
+        
+    Raises:
+        SystemExit: If configuration setup fails or is cancelled
+    """
+    try:
+        from src.path_configuration import ConfigurationManager, SetupWizard, ConfigurationError, SetupCancelledError, SetupError
+        
+        # Initialize configuration manager
+        config_manager = ConfigurationManager()
+        
+        # Try to load existing configuration
+        config = config_manager.load_configuration()
+        
+        if config is None or force_reconfigure:
+            # No configuration exists or forced reconfiguration - run setup wizard
+            if force_reconfigure and config is not None:
+                print("🔧 OneDrive Path Reconfiguration")
+                print("   Reconfiguring OneDrive folder paths as requested.\n")
+            else:
+                print("🔧 OneDrive Path Configuration Setup Required")
+                print("   This appears to be your first time running the tool.")
+                print("   We need to configure your OneDrive folder paths.\n")
+            
+            try:
+                setup_wizard = SetupWizard(config_manager)
+                config = setup_wizard.start_setup()
+                print("✅ OneDrive paths configured successfully!\n")
+                return True
+                
+            except SetupCancelledError:
+                print("\n❌ Setup cancelled by user. Cannot proceed without OneDrive configuration.")
+                print("   Run the tool again when ready to configure paths.")
+                sys.exit(1)
+                
+            except SetupError as e:
+                print(f"\n❌ Setup failed: {e}")
+                print("   Please check your OneDrive folder structure and try again.")
+                sys.exit(1)
+        
+        else:
+            # Configuration exists - validate it
+            validation_result = config_manager.validate_configuration(config)
+            
+            if validation_result.is_valid:
+                # Configuration is valid - continue silently
+                return True
+            else:
+                # Configuration is invalid - offer reconfiguration
+                print(f"⚠️  OneDrive Path Validation Failed: {validation_result.error_message}")
+                
+                if validation_result.missing_directories:
+                    print("   Missing directories:")
+                    for missing_dir in validation_result.missing_directories:
+                        print(f"     - {missing_dir}")
+                
+                if validation_result.inaccessible_paths:
+                    print("   Inaccessible paths:")
+                    for inaccessible_path in validation_result.inaccessible_paths:
+                        print(f"     - {inaccessible_path}")
+                
+                # Check OneDrive sync status and provide guidance
+                from src.path_configuration import check_onedrive_sync_status
+                sync_info = check_onedrive_sync_status(config.onedrive_base_path)
+                
+                if sync_info["guidance_messages"]:
+                    print("\n" + "\n".join(sync_info["guidance_messages"]))
+                
+                print("\nWould you like to reconfigure your OneDrive paths now? (y/n): ", end="")
+                response = input().strip().lower()
+                
+                if response in ['y', 'yes', '1', 'true']:
+                    try:
+                        setup_wizard = SetupWizard(config_manager)
+                        config = setup_wizard.start_setup()
+                        print("✅ OneDrive paths reconfigured successfully!\n")
+                        return True
+                        
+                    except (SetupCancelledError, SetupError) as e:
+                        print(f"\n❌ Reconfiguration failed: {e}")
+                        print("   Cannot proceed without valid OneDrive configuration.")
+                        sys.exit(1)
+                else:
+                    print("❌ Cannot proceed without valid OneDrive configuration.")
+                    print("   Please fix the OneDrive paths and run the tool again.")
+                    sys.exit(1)
+        
+    except ConfigurationError as e:
+        print(f"❌ OneDrive Configuration Error: {e}")
+        print("   Please check your OneDrive setup and try again.")
+        sys.exit(1)
+        
+    except Exception as e:
+        print(f"❌ Unexpected error during OneDrive setup: {e}")
+        print("   Please report this issue if it persists.")
+        sys.exit(1)
+
+
+def show_configuration() -> None:
+    """Display current OneDrive path configuration."""
+    try:
+        from src.path_configuration import ConfigurationManager, ConfigurationError
+        
+        print("🔧 DTT Pricing Tool - OneDrive Path Configuration")
+        print("=" * 50)
+        
+        config_manager = ConfigurationManager()
+        config = config_manager.load_configuration()
+        
+        if config is None:
+            print("❌ No configuration found.")
+            print("   Run the tool without arguments to set up OneDrive paths.")
+            return
+        
+        print(f"📅 Configuration Version: {config.version}")
+        print(f"🕒 Last Validated: {config.last_validated.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"📊 Status: {config.validation_status.value}")
+        print()
+        print("📁 Configured Paths:")
+        print(f"   Base Path: {config.onedrive_base_path}")
+        print(f"   Constants: {config.constants_directory}")
+        print(f"   Source:    {config.source_directory}")
+        print(f"   Output:    {config.output_directory}")
+        print()
+        
+        # Validate current configuration
+        validation_result = config_manager.validate_configuration(config)
+        
+        if validation_result.is_valid:
+            print("✅ Configuration is valid and accessible")
+        else:
+            print(f"❌ Configuration validation failed: {validation_result.error_message}")
+            
+            if validation_result.missing_directories:
+                print("   Missing directories:")
+                for missing_dir in validation_result.missing_directories:
+                    print(f"     - {missing_dir}")
+            
+            if validation_result.inaccessible_paths:
+                print("   Inaccessible paths:")
+                for inaccessible_path in validation_result.inaccessible_paths:
+                    print(f"     - {inaccessible_path}")
+            
+            print("\n💡 Run with --configure-paths to reconfigure")
+        
+        print(f"\n📄 Configuration file: {config_manager.file_manager.config_path}")
+        
+    except ConfigurationError as e:
+        print(f"❌ Configuration Error: {e}")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+
+
 def main() -> None:
     """Main entry point for the pricing tool accelerator."""
+    
+    # Check for command line arguments
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="DTT Pricing Tool Accelerator - Automate pricing tool spreadsheet setup",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--configure-paths", 
+        action="store_true", 
+        help="Force reconfiguration of OneDrive paths"
+    )
+    parser.add_argument(
+        "--show-config", 
+        action="store_true", 
+        help="Display current OneDrive path configuration and exit"
+    )
+    
+    args = parser.parse_args()
+    
+    # Handle --show-config option
+    if args.show_config:
+        show_configuration()
+        return
     
     # Feature 007: Initialize production logging system
     from src.system_integration import setup_production_logging
@@ -134,6 +321,13 @@ def main() -> None:
     
     # Feature 008: Shell alias auto-setup for easy access
     setup_shell_alias_if_needed()
+    
+    # Feature 009: OneDrive path configuration setup
+    setup_onedrive_paths_if_needed(force_reconfigure=args.configure_paths)
+    
+    # Initialize path constants after OneDrive setup
+    from src.constants import initialize_paths
+    initialize_paths()
     
     print("🚀 DTT Pricing Tool Accelerator v1.0.0")
     print("   Automating pricing tool spreadsheet setup...")
@@ -171,15 +365,12 @@ def main() -> None:
         # Step 2: Collect user inputs (Feature 003: Enhanced CLI collection)
         cli_result = collect_cli_fields()
         
+        # Step 2.5: Feature 006 - Collect client margin percentage
+        margin_decimal = collect_margin_percentage()
+        
         # Extract individual values for backward compatibility with filename generation  
         client_name = cli_result.fields["Client Name"].sanitized_value
         gig_name = cli_result.fields["Opportunity Name"].sanitized_value
-        
-        print(f"\n📝 Client: {client_name}")
-        print(f"📝 Opportunity: {gig_name}")  # Updated display name
-        
-        # Step 2.5: Feature 006 - Collect client margin percentage
-        margin_decimal = collect_margin_percentage()
         
         # Step 3: Generate output filename  
         current_date = get_current_date_string()
@@ -218,8 +409,8 @@ def main() -> None:
         
         try:
             # Use centralized constants directory path
-            from src.constants import CONSTANTS_DIRECTORY
-            absolute_constants_dir = Path(CONSTANTS_DIRECTORY).expanduser()
+            from src.constants import get_constants_directory
+            absolute_constants_dir = Path(get_constants_directory()).expanduser()
             
             # Try consolidated Excel session approach first with automatic fallback
             population_summary = populate_spreadsheet_data_consolidated_session(
