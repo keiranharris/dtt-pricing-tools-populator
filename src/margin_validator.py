@@ -25,7 +25,7 @@ def validate_margin_input(margin_input: str) -> MarginValidationResult:
     """
     Validate client margin percentage input.
     
-    Accepts percentage values between 35% and 65% inclusive.
+    Accepts percentage values as positive numbers.
     Supports formats: "35", "35%", "35.5", "35.5%"
     
     Args:
@@ -67,11 +67,11 @@ def validate_margin_input(margin_input: str) -> MarginValidationResult:
             error_message=f"Invalid number format: '{margin_input}'"
         )
     
-    # Validate range: 35-65% inclusive
-    if percentage_value < 35 or percentage_value > 65:
+    # Validate range: must be positive
+    if percentage_value <= 0:
         return MarginValidationResult(
             is_valid=False,
-            error_message=f"Margin must be between 35% and 65%, got {percentage_value}%"
+            error_message=f"Margin must be a positive percentage, got {percentage_value}%"
         )
     
     # Convert to decimal
@@ -109,8 +109,8 @@ def convert_margin_to_decimal(margin_percentage: Union[str, float]) -> float:
         percentage_value = result.decimal_value * 100
     
     # Validate range
-    if percentage_value < 35 or percentage_value > 65:
-        raise OperationError.invalid_input("margin_percentage", f"Margin must be between 35% and 65%, got {percentage_value}%")
+    if percentage_value <= 0:
+        raise OperationError.invalid_input("margin_percentage", f"Margin must be a positive percentage, got {percentage_value}%")
     
     return percentage_value / 100
 
@@ -123,9 +123,9 @@ def get_margin_prompt_text() -> str:
         User-friendly prompt string
     """
     return (
-        "Enter client margin percentage (35-65%):\n"
+        "Enter client margin percentage:\n"
         "  Examples: 45, 45%, 42.5, 42.5%\n"
-        "  Range: 35% to 65% inclusive\n"
+        "  Must be a positive percentage\n"
         "Margin: "
     )
 
@@ -139,7 +139,7 @@ def get_margin_error_help() -> str:
     """
     return (
         "\n❌ Invalid margin input. Please enter:\n"
-        "  • A number between 35 and 65\n"
+        "  • A positive percentage number\n"
         "  • With or without % symbol\n"
         "  • Decimals are allowed (e.g., 42.5%)\n"
         "  • Examples: 45, 45%, 42.5, 42.5%\n"
