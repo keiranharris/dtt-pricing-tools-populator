@@ -43,7 +43,7 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 
 2. **Download the pricing tool**:
    ```bash
-   git clone https://github.com/deloitte-au/dtt-pricing-tools-populator.git
+   git clone https://github.com/keiranharris/dtt-pricing-tools-populator.git
    ```
    *You'll see messages like "Cloning into..." - this is normal and means it's working*
 
@@ -117,7 +117,7 @@ Once you've completed the first-time setup above, using the pricing tool is simp
 
 If git doesn't work or you prefer a simpler approach:
 
-1. **Visit the repository webpage**: https://github.com/deloitte-au/dtt-pricing-tools-populator
+1. **Visit the repository webpage**: https://github.com/keiranharris/dtt-pricing-tools-populator
 2. **Click the green "Code" button** → **"Download ZIP"**
 3. **Save the ZIP file** to your desired location (Desktop, Documents, etc.)
 4. **Extract the ZIP file** by double-clicking it

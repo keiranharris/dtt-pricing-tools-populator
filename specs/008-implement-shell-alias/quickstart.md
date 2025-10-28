@@ -208,7 +208,7 @@ Git is a tool for downloading and managing code projects. Don't worry - you only
    ```
 3. **Download the pricing tool**:
    ```bash
-   git clone https://github.com/your-org/dtt-pricing-tools-populator.git
+   git clone https://github.com/keiranharris/dtt-pricing-tools-populator.git
    ```
 4. **Enter the downloaded folder**:
    ```bash
