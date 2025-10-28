@@ -32,7 +32,7 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 
 #### Step 2: Download the Tool
 
-1. **Navigate to your desired location** (choose where you want the tool):
+1. **Navigate to your desired location** (choose where you want the tool), for example:
    ```bash
    cd ~/Desktop  # Downloads to your Desktop
    # OR
@@ -60,7 +60,7 @@ ls -la pricing_tool_accelerator.py
 ```
 If you see file details, you're ready for setup! If you see "No such file", something went wrong with the download.
 
-#### Step 4: First-Time Setup
+#### Step 4: First-Time Run/Setup
 
 1. **Run the tool once** (this creates the easy 'priceup' shortcut):
    ```bash
@@ -70,36 +70,18 @@ If you see file details, you're ready for setup! If you see "No such file", some
 2. **What to expect during first-time setup:**
    - 🔧 **OneDrive Path Configuration**: On first run, you'll be guided through setting up your OneDrive folder paths
    - ✅ **Shell alias setup**: You'll see a message like "Shell alias 'priceup' set up successfully!"
-   - 📋 **Prompt for client details**: Enter client name, opportunity name, dates, and margin percentage
-   - 📄 **File processing**: The tool will copy templates, populate data, and calculate rates
-   - 📊 **Excel opens**: Your completed pricing tool will open automatically
-   - 🔍 **Finder opens**: The output folder will open showing your new file
-
-3. **Success indicators** - you'll see messages like:
-   ```
-   ✅ OneDrive paths configured successfully!
-   ✅ Shell alias 'priceup' set up successfully!
-   ✅ Populated 63/63 matched fields from 18 constants
-   🎉 All matched fields populated successfully!
-   ✅ Successfully created: 20251026 - CLIENT - OPPORTUNITY - (LowCompV1.2).xlsb
-   ```
-
-4. **Activate the shortcut**:
-   - **Option 1**: Open a new terminal window
-   - **Option 2**: In the current terminal, run: `source ~/.zshrc`
-
-5. **Test the shortcut**: In your new terminal, try typing:
-   ```bash
-   priceup
-   ```
-   If it works, you'll see the pricing tool start up! 🎉
+   - Then the program will run as normal
+      - 📋 **Prompt for client details**: Enter client name, opportunity name, dates, and margin percentage
+      - 📄 **File processing**: The tool will copy templates, populate data, and calculate rates
+      - 📊 **Excel opens**: Your completed pricing tool will open automatically
+      - 🔍 **Finder opens**: The output folder will open showing your new file
 
 ### Everyday Usage (After First-Time Setup)
 
 Once you've completed the first-time setup above, using the pricing tool is simple:
 
 1. **Open Terminal** from anywhere on your computer
-2. **Type the magic command:**
+2. **Type the magic command** (note this requires you to have restarted your teminal at least once to kick in the alias):
    ```bash
    priceup
    ```
@@ -161,4 +143,3 @@ The system uses OneDrive shared libraries to enable:
 
 **Need more help?** See the [detailed documentation](./docs/DETAILED.md) for alternative download methods, troubleshooting, performance tips, and advanced configuration options.
 
-*Built for DTT Cloud Network & Security Practice*
