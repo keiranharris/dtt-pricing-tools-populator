@@ -35,7 +35,7 @@ The application automatically displays the current version at startup:
 Use the `--version` or `-v` flags to display only the version number:
 
 ```bash
-python3 pricing_tool_accelerator.py --version
+python3 priceup.py --version
 # Output: 2025.11.18_1
 ```
 

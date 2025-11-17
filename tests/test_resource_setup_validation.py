@@ -96,7 +96,7 @@ def test_configuration():
     
     # Read the main application file to check constants
     try:
-        main_file = Path(__file__).parent / "pricing_tool_accelerator.py"
+        main_file = Path(__file__).parent / "priceup.py"
         if not main_file.exists():
             print("❌ Main application file not found")
             return False

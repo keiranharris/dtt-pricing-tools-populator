@@ -11,7 +11,7 @@ from pathlib import Path
 
 # === SHELL CONFIGURATION ===
 DEFAULT_ALIAS_NAME = "priceup"
-DEFAULT_TARGET_SCRIPT = "pricing_tool_accelerator.py"
+DEFAULT_TARGET_SCRIPT = "priceup.py"
 DEFAULT_CODE_DIRECTORY = "."
 
 # Shell support
