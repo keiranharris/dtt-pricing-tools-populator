@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Main Migration Script.
+
+Execute complete project migration from 'priceup' to 'priceup'.
+"""
+
+import sys
+import os
+from pathlib import Path
+
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from project_migration import ProjectMigrationOrchestrator, create_migration_context
+
+
+def main():
+    """Execute main migration process."""
+    print("🚀 Starting Project Migration: priceup → priceup")
+    print("=" * 60)
+    
+    try:
+        # Initialize orchestrator
+        orchestrator = ProjectMigrationOrchestrator(log_level="INFO")
+        
+        # Initialize migration context
+        print("📋 Initializing migration context...")
+        context = orchestrator.initialize_migration(
+            old_name="priceup",
+            new_name="priceup",
+            old_onedrive="_PricingToolAccel",
+            new_onedrive="_priceup"
+        )
+        
+        print(f"✓ Migration context created")
+        print(f"  Old project name: {context.old_project_name}")
+        print(f"  New project name: {context.new_project_name}")
+        print(f"  Old OneDrive folder: {context.old_onedrive_folder}")
+        print(f"  New OneDrive folder: {context.new_onedrive_folder}")
+        print()
+        
+        # Execute migration
+        print("⚡ Executing migration phases...")
+        result = orchestrator.execute_migration(context)
+        
+        print("\n" + "=" * 60)
+        
+        # Display results
+        if result.success:
+            print("🎉 Migration Completed Successfully!")
+            print(f"✅ Phases completed: {', '.join(result.phases_completed)}")
+            
+            if result.warnings:
+                print(f"⚠️  Warnings: {len(result.warnings)}")
+                for warning in result.warnings:
+                    print(f"   - {warning}")
+        else:
+            print("❌ Migration Failed!")
+            print(f"❌ Failed phases: {', '.join(result.phases_failed)}")
+            print(f"✅ Completed phases: {', '.join(result.phases_completed)}")
+            
+            if result.error_messages:
+                print("\nError Details:")
+                for error in result.error_messages:
+                    print(f"   - {error}")
+            
+            if result.rollback_available:
+                print("\n🔄 Rollback is available using backup files")
+        
+        print(f"\n📊 Migration Statistics:")
+        print(f"   Completion time: {result.completion_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"   Overall progress: {context.get_overall_progress():.1f}%")
+        print(f"   Backup available: {'Yes' if result.rollback_available else 'No'}")
+        
+        # Display next steps
+        print(f"\n📝 Next Steps:")
+        if result.success:
+            print("   1. Test the renamed application: python priceup.py --help")
+            print("   2. Verify shell alias works: priceup --version")
+            print("   3. Test OneDrive folder access")
+            print("   4. Update any external documentation or links")
+            print("   5. Notify team members of completion")
+        else:
+            print("   1. Review error messages above")
+            print("   2. Fix any issues and retry migration")
+            print("   3. Consider rolling back if needed")
+        
+        print("\n" + "=" * 60)
+        return 0 if result.success else 1
+        
+    except KeyboardInterrupt:
+        print("\n🛑 Migration interrupted by user")
+        return 130
+    except Exception as e:
+        print(f"\n💥 Migration failed with unexpected error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+if __name__ == "__main__":
+    exit_code = main()
+    sys.exit(exit_code)

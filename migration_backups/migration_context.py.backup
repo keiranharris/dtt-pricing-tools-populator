@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Migration Context Data Model.
+
+Central configuration and state tracking for the project renaming process.
+"""
+
+from datetime import datetime
+from dataclasses import dataclass, field
+from typing import Dict, Optional
+import re
+
+
+@dataclass
+class MigrationContext:
+    """Central configuration and state tracking for the renaming process.
+    
+    Attributes:
+        old_project_name: Original project name ("dtt-pricing-tools-populator")
+        new_project_name: Target project name ("priceup")
+        old_onedrive_folder: Original OneDrive folder name ("_PricingToolAccel")
+        new_onedrive_folder: Target OneDrive folder name ("_priceup")
+        github_repository_url: Current GitHub repository URL
+        migration_timestamp: When migration was initiated
+        backup_created: Whether backup configurations exist
+        phase_status: Status of each migration phase
+    """
+    
+    old_project_name: str
+    new_project_name: str
+    old_onedrive_folder: str
+    new_onedrive_folder: str
+    github_repository_url: str = ""
+    migration_timestamp: Optional[datetime] = None
+    backup_created: bool = False
+    phase_status: Dict[str, str] = field(default_factory=dict)
+    
+    def __post_init__(self):
+        """Initialize migration context with validation."""
+        self._validate_names()
+        if self.migration_timestamp is None:
+            self.migration_timestamp = datetime.now()
+        self._initialize_phase_status()
+    
+    def _validate_names(self) -> None:
+        """Validate project and folder names according to requirements."""
+        # Validate new project name as valid GitHub repository name
+        github_pattern = r'^[a-zA-Z0-9._-]+$'
+        if not re.match(github_pattern, self.new_project_name):
+            raise ValueError(
+                f"Invalid GitHub repository name: {self.new_project_name}. "
+                "Must contain only letters, numbers, dots, hyphens, and underscores."
+            )
+        
+        # Validate folder names are non-empty
+        if not self.new_onedrive_folder.strip():
+            raise ValueError("OneDrive folder name cannot be empty")
+        
+        # All name fields must be non-empty strings
+        required_fields = [
+            ('old_project_name', self.old_project_name),
+            ('new_project_name', self.new_project_name),
+            ('old_onedrive_folder', self.old_onedrive_folder),
+            ('new_onedrive_folder', self.new_onedrive_folder),
+        ]
+        
+        for field_name, field_value in required_fields:
+            if not field_value or not isinstance(field_value, str):
+                raise ValueError(f"{field_name} must be a non-empty string")
+    
+    def _initialize_phase_status(self) -> None:
+        """Initialize phase status tracking."""
+        phases = [
+            'setup',
+            'repository_migration',
+            'onedrive_coordination', 
+            'file_renaming',
+            'user_configuration',
+            'validation'
+        ]
+        
+        for phase in phases:
+            if phase not in self.phase_status:
+                self.phase_status[phase] = 'PENDING'
+    
+    def update_phase_status(self, phase: str, status: str) -> None:
+        """Update the status of a migration phase.
+        
+        Args:
+            phase: Phase name (setup, repository_migration, etc.)
+            status: New status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+        """
+        valid_statuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED']
+        if status not in valid_statuses:
+            raise ValueError(f"Invalid status: {status}. Must be one of {valid_statuses}")
+        
+        self.phase_status[phase] = status
+    
+    def get_phase_status(self, phase: str) -> str:
+        """Get the status of a migration phase."""
+        return self.phase_status.get(phase, 'PENDING')
+    
+    def is_phase_complete(self, phase: str) -> bool:
+        """Check if a migration phase is completed."""
+        return self.get_phase_status(phase) == 'COMPLETED'
+    
+    def get_overall_progress(self) -> float:
+        """Calculate overall migration progress as percentage."""
+        completed_phases = sum(1 for status in self.phase_status.values() 
+                             if status == 'COMPLETED')
+        total_phases = len(self.phase_status)
+        return (completed_phases / total_phases) * 100 if total_phases > 0 else 0.0
+
+
+def create_migration_context(
+    old_name: str = "dtt-pricing-tools-populator",
+    new_name: str = "priceup",
+    old_onedrive: str = "_PricingToolAccel",
+    new_onedrive: str = "_priceup"
+) -> MigrationContext:
+    """Create a migration context with default values for this project.
+    
+    Args:
+        old_name: Original project name
+        new_name: Target project name
+        old_onedrive: Original OneDrive folder name
+        new_onedrive: Target OneDrive folder name
+        
+    Returns:
+        Configured MigrationContext instance
+    """
+    return MigrationContext(
+        old_project_name=old_name,
+        new_project_name=new_name,
+        old_onedrive_folder=old_onedrive,
+        new_onedrive_folder=new_onedrive,
+        github_repository_url="https://github.com/keiranharris/dtt-pricing-tools-populator"
+    )

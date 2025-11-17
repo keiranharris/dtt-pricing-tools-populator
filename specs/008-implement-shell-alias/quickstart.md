@@ -208,11 +208,11 @@ Git is a tool for downloading and managing code projects. Don't worry - you only
    ```
 3. **Download the pricing tool**:
    ```bash
-   git clone https://github.com/keiranharris/dtt-pricing-tools-populator.git
+   git clone https://github.com/keiranharris/priceup.git
    ```
 4. **Enter the downloaded folder**:
    ```bash
-   cd dtt-pricing-tools-populator
+   cd priceup
    ```
 
 # 2. Add first-time usage section (15 min)  

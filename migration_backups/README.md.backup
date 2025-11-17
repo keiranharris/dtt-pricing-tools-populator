@@ -43,13 +43,13 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 
 2. **Download the pricing tool**:
    ```bash
-   git clone https://github.com/keiranharris/priceup.git
+   git clone https://github.com/keiranharris/dtt-pricing-tools-populator.git
    ```
    *You'll see messages like "Cloning into..." - this is normal and means it's working*
 
 3. **Enter the downloaded folder**:
    ```bash
-   cd priceup
+   cd dtt-pricing-tools-populator
    ```
 
 #### Step 3: Verify the Download
@@ -108,7 +108,7 @@ Once you've completed the first-time setup above, using the pricing tool is simp
 ## Directory Structure
 
 ```
-priceup/
+dtt-pricing-tools-populator/
 ├── pricing_tool_accelerator.py    # Main application entry point
 ├── src/                          # Core application modules
 │   ├── constants.py              # Dynamic path configuration

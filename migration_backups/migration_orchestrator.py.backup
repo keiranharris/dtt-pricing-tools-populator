@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""Project Migration Orchestrator.
+
+Main orchestrator for complete project renaming and rebranding operations.
+"""
+
+import os
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+
+from .migration_context import MigrationContext, create_migration_context
+from .repository_ops import GitHubRepositoryMigrator
+from .onedrive_coordinator import OneDriveMigrationCoordinator
+from .file_ops import FileOperations
+from .text_processor import TextProcessor
+from .state_manager import StateManager
+from .backup_manager import BackupManager
+from .migration_logging import get_migration_logger, configure_migration_logging
+
+
+@dataclass
+class MigrationResult:
+    """Result of migration operation."""
+    success: bool
+    phases_completed: List[str]
+    phases_failed: List[str]
+    error_messages: List[str]
+    warnings: List[str]
+    rollback_available: bool
+    completion_timestamp: datetime
+
+
+class ProjectMigrationOrchestrator:
+    """Main orchestrator for project renaming and rebranding."""
+    
+    def __init__(self, log_level: str = "INFO"):
+        """Initialize migration orchestrator.
+        
+        Args:
+            log_level: Logging level for migration operations
+        """
+        self.logger = configure_migration_logging(log_level=log_level)
+        self.state_manager = StateManager()
+        self.backup_manager = BackupManager()
+        
+        # Migration components
+        self.github_migrator = GitHubRepositoryMigrator()
+        self.onedrive_coordinator = OneDriveMigrationCoordinator()
+        self.file_ops = FileOperations()
+        self.text_processor = TextProcessor()
+    
+    def initialize_migration(self, old_name: str = "dtt-pricing-tools-populator",
+                           new_name: str = "priceup",
+                           old_onedrive: str = "_PricingToolAccel",
+                           new_onedrive: str = "_priceup") -> MigrationContext:
+        """Initialize the migration process.
+        
+        Args:
+            old_name: Current project name
+            new_name: Target project name
+            old_onedrive: Current OneDrive folder name
+            new_onedrive: Target OneDrive folder name
+            
+        Returns:
+            Configured MigrationContext object
+        """
+        try:
+            # Create migration context
+            context = create_migration_context(old_name, new_name, old_onedrive, new_onedrive)
+            
+            # Save initial state
+            self.state_manager.save_migration_context(context)
+            
+            # Log migration start
+            self.logger.log_migration_start({
+                'old_project_name': context.old_project_name,
+                'new_project_name': context.new_project_name,
+                'old_onedrive_folder': context.old_onedrive_folder,
+                'new_onedrive_folder': context.new_onedrive_folder
+            })
+            
+            # Create initial backup
+            project_root = os.getcwd()
+            backup_path = self.backup_manager.create_project_backup(project_root)
+            context.backup_created = True
+            
+            self.logger.log_operation("Initial backup", True, f"Created at {backup_path}")
+            
+            return context
+            
+        except Exception as e:
+            self.logger.log_error(f"Migration initialization failed: {str(e)}", e)
+            raise
+    
+    def execute_migration(self, context: MigrationContext) -> MigrationResult:
+        """Execute the complete migration process.
+        
+        Args:
+            context: Initialized migration context
+            
+        Returns:
+            MigrationResult with success status and details
+        """
+        result = MigrationResult(
+            success=False,
+            phases_completed=[],
+            phases_failed=[],
+            error_messages=[],
+            warnings=[],
+            rollback_available=context.backup_created,
+            completion_timestamp=datetime.now()
+        )
+        
+        try:
+            self.logger.log_operation("Migration execution", True, "Starting complete migration")
+            
+            # Phase 1: GitHub Repository Migration
+            if self._execute_github_migration(context, result):
+                result.phases_completed.append("github_migration")
+                context.update_phase_status("repository_migration", "COMPLETED")
+            else:
+                result.phases_failed.append("github_migration")
+                context.update_phase_status("repository_migration", "FAILED")
+            
+            # Phase 2: File System Updates
+            if self._execute_file_migration(context, result):
+                result.phases_completed.append("file_migration")
+                context.update_phase_status("file_renaming", "COMPLETED")
+            else:
+                result.phases_failed.append("file_migration")
+                context.update_phase_status("file_renaming", "FAILED")
+            
+            # Phase 3: OneDrive Coordination
+            if self._execute_onedrive_coordination(context, result):
+                result.phases_completed.append("onedrive_coordination")
+                context.update_phase_status("onedrive_coordination", "COMPLETED")
+            else:
+                result.phases_failed.append("onedrive_coordination")
+                context.update_phase_status("onedrive_coordination", "FAILED")
+            
+            # Phase 4: Validation
+            if self._execute_validation(context, result):
+                result.phases_completed.append("validation")
+                context.update_phase_status("validation", "COMPLETED")
+            else:
+                result.phases_failed.append("validation")
+                context.update_phase_status("validation", "FAILED")
+            
+            # Determine overall success
+            result.success = len(result.phases_failed) == 0
+            
+            # Save final state
+            self.state_manager.save_migration_context(context)
+            
+            # Log completion
+            self.logger.log_migration_complete(result.success, {
+                'phases_completed': result.phases_completed,
+                'phases_failed': result.phases_failed,
+                'total_operations': len(result.phases_completed) + len(result.phases_failed),
+                'successful_operations': len(result.phases_completed)
+            })
+            
+            return result
+            
+        except Exception as e:
+            result.error_messages.append(f"Migration execution failed: {str(e)}")
+            self.logger.log_error(f"Migration execution failed: {str(e)}", e)
+            return result
+    
+    def _execute_github_migration(self, context: MigrationContext, result: MigrationResult) -> bool:
+        """Execute GitHub repository migration phase."""
+        try:
+            self.logger.log_phase_start("github_migration")
+            
+            # Check GitHub CLI access
+            if not self.github_migrator.validate_github_cli_access():
+                result.warnings.append("GitHub CLI not available - skipping repository rename")
+                return True  # Non-critical for MVP
+            
+            # Perform repository rename
+            repo_migration = self.github_migrator.rename_repository(
+                context.old_project_name,
+                context.new_project_name,
+                "keiranharris"  # Repository owner
+            )
+            
+            if repo_migration.state == "COMPLETED":
+                # Update local remote URL
+                self.github_migrator.update_local_remote_url(
+                    context.old_project_name,
+                    context.new_project_name,
+                    "keiranharris"
+                )
+                self.logger.log_phase_complete("github_migration", True)
+                return True
+            else:
+                result.error_messages.append(repo_migration.get_error_message() or "GitHub migration failed")
+                self.logger.log_phase_complete("github_migration", False)
+                return False
+                
+        except Exception as e:
+            result.error_messages.append(f"GitHub migration error: {str(e)}")
+            self.logger.log_error(f"GitHub migration phase failed: {str(e)}", e)
+            return False
+    
+    def _execute_file_migration(self, context: MigrationContext, result: MigrationResult) -> bool:
+        """Execute file system migration phase."""
+        try:
+            self.logger.log_phase_start("file_migration")
+            
+            # Rename main application file
+            main_file_rename = self.file_ops.rename_main_application_file()
+            if main_file_rename.state != "COMPLETED":
+                result.warnings.append(f"Main file rename: {main_file_rename.get_error_message()}")
+            
+            # Update all file contents with new project name
+            project_root = os.getcwd()
+            file_updates = self.file_ops.update_all_project_references(
+                project_root,
+                context.old_project_name,
+                context.new_project_name
+            )
+            
+            # Check results
+            failed_updates = [f for f in file_updates if f.state == "FAILED"]
+            if failed_updates:
+                result.warnings.append(f"Failed to update {len(failed_updates)} files")
+            
+            # Update README specifically
+            readme_files = ["README.md", "readme.md", "README.txt"]
+            for readme in readme_files:
+                if os.path.exists(readme):
+                    self.text_processor.update_readme_file(
+                        readme,
+                        context.old_project_name,
+                        context.new_project_name
+                    )
+                    break
+            
+            # Update documentation
+            if os.path.exists("docs"):
+                self.text_processor.update_documentation_files(
+                    "docs",
+                    context.old_project_name,
+                    context.new_project_name
+                )
+            
+            self.logger.log_phase_complete("file_migration", True, {
+                "files_updated": len(file_updates),
+                "failed_updates": len(failed_updates)
+            })
+            
+            return True
+            
+        except Exception as e:
+            result.error_messages.append(f"File migration error: {str(e)}")
+            self.logger.log_error(f"File migration phase failed: {str(e)}", e)
+            return False
+    
+    def _execute_onedrive_coordination(self, context: MigrationContext, result: MigrationResult) -> bool:
+        """Execute OneDrive coordination phase."""
+        try:
+            self.logger.log_phase_start("onedrive_coordination")
+            
+            # Coordinate OneDrive folder rename
+            onedrive_migration = self.onedrive_coordinator.coordinate_folder_rename(
+                context.old_onedrive_folder,
+                context.new_onedrive_folder,
+                "admin@example.com"  # Placeholder admin contact
+            )
+            
+            # Simulate team notification
+            team_members = ["user1@example.com", "user2@example.com"]
+            self.onedrive_coordinator.notify_team_members(onedrive_migration, team_members)
+            
+            # Execute folder rename (simulated)
+            if self.onedrive_coordinator.execute_folder_rename(onedrive_migration):
+                self.logger.log_phase_complete("onedrive_coordination", True)
+                return True
+            else:
+                result.error_messages.append("OneDrive folder rename coordination failed")
+                self.logger.log_phase_complete("onedrive_coordination", False)
+                return False
+                
+        except Exception as e:
+            result.error_messages.append(f"OneDrive coordination error: {str(e)}")
+            self.logger.log_error(f"OneDrive coordination phase failed: {str(e)}", e)
+            return False
+    
+    def _execute_validation(self, context: MigrationContext, result: MigrationResult) -> bool:
+        """Execute validation phase."""
+        try:
+            self.logger.log_phase_start("validation")
+            
+            # Validate no old references remain
+            validation_errors = []
+            
+            # Check key files for remaining old references
+            key_files = ["README.md", "priceup.py"]
+            for file_path in key_files:
+                if os.path.exists(file_path):
+                    validation_result = self.text_processor.validate_text_replacements(
+                        file_path,
+                        context.old_project_name
+                    )
+                    if not validation_result['valid']:
+                        validation_errors.append(f"{file_path}: {len(validation_result['remaining_references'])} remaining references")
+            
+            # Check if new main file exists
+            if not os.path.exists("priceup.py"):
+                validation_errors.append("New main application file (priceup.py) not found")
+            
+            if validation_errors:
+                result.warnings.extend(validation_errors)
+                self.logger.log_validation_result("migration_completion", False, "; ".join(validation_errors))
+            else:
+                self.logger.log_validation_result("migration_completion", True, "All validations passed")
+            
+            self.logger.log_phase_complete("validation", len(validation_errors) == 0)
+            return len(validation_errors) == 0
+            
+        except Exception as e:
+            result.error_messages.append(f"Validation error: {str(e)}")
+            self.logger.log_error(f"Validation phase failed: {str(e)}", e)
+            return False
+    
+    def get_migration_status(self, context: Optional[MigrationContext] = None) -> Dict[str, Any]:
+        """Get current status of ongoing migration."""
+        if context is None:
+            context = self.state_manager.load_migration_context()
+        
+        if context is None:
+            return {'status': 'NO_MIGRATION', 'message': 'No migration in progress'}
+        
+        return {
+            'status': 'IN_PROGRESS',
+            'old_name': context.old_project_name,
+            'new_name': context.new_project_name,
+            'progress': context.get_overall_progress(),
+            'phases': context.phase_status,
+            'backup_available': context.backup_created
+        }

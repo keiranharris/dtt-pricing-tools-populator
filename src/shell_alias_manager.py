@@ -416,7 +416,7 @@ class ShellAliasManager:
             script_path = PathResolver.resolve_target_script_path()
             
         if not script_path:
-            script_path = Path.cwd() / "pricing_tool_accelerator.py"
+            script_path = Path.cwd() / "priceup.py"
         
         import shlex
         escaped_path = shlex.quote(str(script_path))

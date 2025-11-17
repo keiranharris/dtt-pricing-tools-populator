@@ -20,7 +20,7 @@ This feature automates the weekly task of copying and renaming Excel pricing tem
 ### Basic Operation
 
 ```bash
-cd /path/to/dtt-pricing-tools-populator
+cd /path/to/priceup
 python pricing_tool_accelerator.py
 ```
 

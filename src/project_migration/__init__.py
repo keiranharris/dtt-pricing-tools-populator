@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Project Migration Module.
+
+This module provides functionality for migrating the project identity from
+'priceup' to 'priceup' including:
+- GitHub repository renaming
+- File and directory renaming
+- Text content replacement
+- OneDrive folder coordination
+- User configuration updates
+"""
+
+from .migration_context import MigrationContext, create_migration_context
+from .migration_orchestrator import ProjectMigrationOrchestrator, MigrationResult
+from .repository_ops import GitHubRepositoryMigrator
+from .onedrive_coordinator import OneDriveMigrationCoordinator
+from .file_ops import FileOperations
+from .text_processor import TextProcessor
+from .state_manager import StateManager
+from .backup_manager import BackupManager
+
+__all__ = [
+    'MigrationContext',
+    'create_migration_context',
+    'ProjectMigrationOrchestrator',
+    'MigrationResult',
+    'GitHubRepositoryMigrator',
+    'OneDriveMigrationCoordinator',
+    'FileOperations',
+    'TextProcessor',
+    'StateManager',
+    'BackupManager',
+]
+
+__version__ = '1.0.0'

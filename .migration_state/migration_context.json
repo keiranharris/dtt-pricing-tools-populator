@@ -1,0 +1,18 @@
+{
+  "old_project_name": "dtt-pricing-tools-populator",
+  "new_project_name": "priceup",
+  "old_onedrive_folder": "_PricingToolAccel",
+  "new_onedrive_folder": "_priceup",
+  "github_repository_url": "https://github.com/keiranharris/dtt-pricing-tools-populator",
+  "migration_timestamp": "2025-11-18T07:21:26.139781",
+  "backup_created": true,
+  "phase_status": {
+    "setup": "PENDING",
+    "repository_migration": "FAILED",
+    "onedrive_coordination": "FAILED",
+    "file_renaming": "COMPLETED",
+    "user_configuration": "PENDING",
+    "validation": "COMPLETED"
+  },
+  "saved_at": "2025-11-18T07:21:57.578690"
+}

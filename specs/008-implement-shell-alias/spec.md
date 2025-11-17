@@ -3,7 +3,7 @@
 **Feature Branch**: `008-implement-shell-alias`  
 **Created**: 2025-10-26  
 **Status**: Draft  
-**Input**: User description: "can we do one more change - i want to create an wrapper useage helper that ultimately creates an alias in a users ~/.zshrc file called 'priceup'. this creation logic should only be run the first time the main pricing_tool_accelerator.py is run (e.g. once the alias exists, there is no need to create it new each time). this should assume a user has just git cloned the repo into their desired location. e.g. for me - my code directory is: /Users/keharris/_K/_CODE/DEV/ so when i git clone i will get a new dtt-pricing-tools-populator directory there... and therefore my alias should be: alias priceup='python3 /Users/keharris/_K/_CODE/DEV/dtt-pricing-tools-populator/pricing_tool_accelerator.py' (but noting thats just me - your code should be able to handle wherever that user first downloads the repo to). please ensure the README.md includes usage instructions... both first time (the harder one).... and then subsequent times (the easier path)"
+**Input**: User description: "can we do one more change - i want to create an wrapper useage helper that ultimately creates an alias in a users ~/.zshrc file called 'priceup'. this creation logic should only be run the first time the main pricing_tool_accelerator.py is run (e.g. once the alias exists, there is no need to create it new each time). this should assume a user has just git cloned the repo into their desired location. e.g. for me - my code directory is: /Users/keharris/_K/_CODE/DEV/ so when i git clone i will get a new priceup directory there... and therefore my alias should be: alias priceup='python3 /Users/keharris/_K/_CODE/DEV/priceup/pricing_tool_accelerator.py' (but noting thats just me - your code should be able to handle wherever that user first downloads the repo to). please ensure the README.md includes usage instructions... both first time (the harder one).... and then subsequent times (the easier path)"
 
 ## Clarifications
 
@@ -113,7 +113,7 @@ A business user or non-technical team member needs to use the DTT Pricing Tool b
 
 - **Shell Alias**: A command shortcut ('priceup') that maps to the full python3 execution command with absolute path
 - **User Shell Configuration**: The ~/.zshrc file where the alias is stored and loaded by the shell
-- **Repository Path**: The absolute filesystem location where the user has cloned the dtt-pricing-tools-populator repository
+- **Repository Path**: The absolute filesystem location where the user has cloned the priceup repository
 
 ## Success Criteria
 

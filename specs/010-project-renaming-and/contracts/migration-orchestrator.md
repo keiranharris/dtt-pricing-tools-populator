@@ -1,0 +1,207 @@
+# Migration Orchestrator Contract
+
+**Date**: 2025-11-18  
+**Type**: Primary Interface Contract  
+**Purpose**: Defines the main orchestrator interface for project renaming and rebranding
+
+## Interface: ProjectMigrationOrchestrator
+
+### Primary Methods
+
+#### `initialize_migration(old_name: str, new_name: str, old_onedrive: str, new_onedrive: str) -> MigrationContext`
+**Purpose**: Initialize the migration process with source and target names
+
+**Parameters**:
+- `old_name`: Current project name ("priceup")
+- `new_name`: Target project name ("priceup") 
+- `old_onedrive`: Current OneDrive folder name ("_PricingToolAccel")
+- `new_onedrive`: Target OneDrive folder name ("_priceup")
+
+**Returns**: Configured `MigrationContext` object
+
+**Preconditions**:
+- All parameters must be valid names
+- Current project must exist in expected locations
+- User must have necessary permissions
+
+**Postconditions**:
+- Migration context created with initial state
+- Backup directories prepared
+- Migration log initialized
+
+**Errors**:
+- `InvalidNameError`: If target names are invalid
+- `PermissionError`: If user lacks necessary access
+- `ProjectNotFoundError`: If current project cannot be located
+
+#### `execute_migration(context: MigrationContext) -> MigrationResult`
+**Purpose**: Execute the complete migration process
+
+**Parameters**:
+- `context`: Initialized migration context
+
+**Returns**: `MigrationResult` with success status and details
+
+**Preconditions**:
+- Migration context must be valid and initialized
+- All dependencies must be available
+- Backup storage must be available
+
+**Postconditions**:
+- GitHub repository renamed (or marked failed)
+- OneDrive coordination completed (or marked failed) 
+- File renaming completed (or marked failed)
+- User configurations updated (or marked failed)
+- Migration state persisted for recovery
+
+**Errors**:
+- `GitHubAPIError`: If GitHub renaming fails
+- `OneDriveCoordinationError`: If OneDrive admin coordination fails
+- `FileSystemError`: If file operations fail
+- `UserConfigurationError`: If user config updates fail
+
+#### `rollback_migration(context: MigrationContext) -> RollbackResult`
+**Purpose**: Reverse migration changes and restore original state
+
+**Parameters**:
+- `context`: Migration context with rollback data
+
+**Returns**: `RollbackResult` with restoration status
+
+**Preconditions**:
+- Migration must have been attempted (partial or complete)
+- Backup data must be available and valid
+- Rollback permissions must be available
+
+**Postconditions**:
+- All reversible changes undone
+- Original state restored where possible
+- Rollback actions logged for audit
+
+**Errors**:
+- `RollbackFailureError`: If rollback operations fail
+- `BackupCorruptionError`: If backup data is invalid
+- `PartialRollbackError`: If only some changes can be reversed
+
+#### `validate_migration(context: MigrationContext) -> ValidationResult`
+**Purpose**: Verify migration completion and integrity
+
+**Parameters**:
+- `context`: Migration context to validate
+
+**Returns**: `ValidationResult` with verification status and details
+
+**Preconditions**:
+- Migration must be marked as completed
+- All target entities must be accessible
+
+**Postconditions**:
+- Migration integrity verified or issues identified
+- Validation report generated
+- Cleanup recommendations provided
+
+**Errors**:
+- `ValidationError`: If critical validation checks fail
+- `IntegrityError`: If data corruption is detected
+
+### Support Methods
+
+#### `get_migration_status(context: MigrationContext) -> MigrationStatus`
+**Purpose**: Get current status of ongoing migration
+
+#### `pause_migration(context: MigrationContext) -> bool`
+**Purpose**: Pause an ongoing migration for later resumption  
+
+#### `resume_migration(context: MigrationContext) -> bool`
+**Purpose**: Resume a paused migration from its current state
+
+#### `cleanup_migration(context: MigrationContext) -> bool`
+**Purpose**: Clean up temporary files and finalize successful migration
+
+## Data Contracts
+
+### MigrationResult
+```python
+@dataclass
+class MigrationResult:
+    success: bool
+    phases_completed: List[str]
+    phases_failed: List[str] 
+    error_messages: List[str]
+    warnings: List[str]
+    rollback_available: bool
+    completion_timestamp: datetime
+```
+
+### RollbackResult  
+```python
+@dataclass
+class RollbackResult:
+    success: bool
+    changes_reversed: List[str]
+    changes_irreversible: List[str]
+    error_messages: List[str]
+    restoration_timestamp: datetime
+```
+
+### ValidationResult
+```python
+@dataclass
+class ValidationResult:
+    valid: bool
+    checks_passed: List[str]
+    checks_failed: List[str]
+    integrity_score: float
+    recommendations: List[str]
+    validation_timestamp: datetime
+```
+
+### MigrationStatus
+```python
+@dataclass  
+class MigrationStatus:
+    current_phase: str
+    overall_progress: float
+    phase_progress: float
+    estimated_remaining: timedelta
+    can_pause: bool
+    can_rollback: bool
+```
+
+## Error Hierarchy
+
+```
+MigrationError (base)
+├── InvalidNameError
+├── PermissionError  
+├── ProjectNotFoundError
+├── GitHubAPIError
+├── OneDriveCoordinationError
+├── FileSystemError
+├── UserConfigurationError
+├── RollbackFailureError
+├── BackupCorruptionError
+├── PartialRollbackError
+├── ValidationError
+└── IntegrityError
+```
+
+## State Management
+
+The orchestrator must maintain consistent state across all phases:
+1. **INITIALIZED**: Ready to begin migration
+2. **REPOSITORY_PHASE**: GitHub renaming in progress
+3. **ONEDRIVE_PHASE**: OneDrive coordination in progress  
+4. **FILE_PHASE**: File and directory renaming in progress
+5. **USER_PHASE**: User configuration updates in progress
+6. **VALIDATION_PHASE**: Migration integrity verification in progress
+7. **COMPLETED**: Migration successfully finished
+8. **FAILED**: Migration failed, rollback available
+9. **ROLLEDBACK**: Changes reversed, original state restored
+
+## Concurrency Considerations
+
+- Only one migration can be active per project at a time
+- Lock files prevent concurrent executions
+- State persistence enables recovery from interruptions
+- Phase-based execution allows for restart from failure points

@@ -1,0 +1,336 @@
+# Implementation Quickstart: Project Renaming
+
+**Date**: 2025-11-18  
+**Estimated Duration**: 4-6 hours  
+**Complexity**: Medium  
+**Risk Level**: Medium-High
+
+## Prerequisites
+
+### Required Access
+- [ ] GitHub repository admin permissions
+- [ ] OneDrive administrator contact information  
+- [ ] Team member contact list
+- [ ] Local development environment access
+- [ ] Backup storage location (minimum 5GB available)
+
+### Required Tools
+- [ ] Python 3.11+ environment
+- [ ] Git command line tools
+- [ ] GitHub API token with repo admin scope
+- [ ] Text editor with find/replace capabilities
+- [ ] Terminal/command prompt access
+
+### Pre-Implementation Validation
+```bash
+# Verify GitHub access
+gh auth status
+
+# Verify repository permissions  
+gh api repos/keharris/priceup
+
+# Check local repository status
+git status
+git remote -v
+
+# Verify OneDrive folder access
+# (Manual check required)
+```
+
+## Implementation Order
+
+### Phase 1: Preparation (30 minutes)
+**Goal**: Set up safe migration environment with backups
+
+#### 1.1 Create Local Backup
+```bash
+cd ~/
+cp -r _K/_CODE/DEV/priceup priceup-backup-$(date +%Y%m%d)
+```
+
+#### 1.2 Document Current State
+```bash
+# Repository information
+gh api repos/keharris/priceup > repo-backup-info.json
+
+# Local configuration
+env | grep -i onedrive > current-env-backup.txt
+```
+
+#### 1.3 Coordinate with OneDrive Admin
+- [ ] Send rename request email to OneDrive administrator
+- [ ] Schedule folder rename for specific date/time  
+- [ ] Confirm team notification timeline
+- [ ] Verify backup creation approval
+
+### Phase 2: GitHub Repository Renaming (45 minutes)
+**Goal**: Rename GitHub repository with automatic redirects
+
+#### 2.1 Pre-Rename Verification
+```bash
+# Verify repository status
+gh api repos/keharris/priceup/branches --paginate
+gh api repos/keharris/priceup/tags --paginate
+gh api repos/keharris/priceup/releases --paginate
+```
+
+#### 2.2 Execute Repository Rename
+```bash
+# Using GitHub CLI (recommended)
+gh api repos/keharris/priceup -X PATCH -f name=priceup
+
+# Alternative: Manual via GitHub web interface
+# Navigate to Settings > Repository name > Rename
+```
+
+#### 2.3 Verify Rename Success
+```bash
+# Test new repository URL
+gh api repos/keharris/priceup
+
+# Test redirect from old URL  
+curl -I https://github.com/keharris/priceup
+
+# Update local remote
+git remote set-url origin https://github.com/keharris/priceup.git
+```
+
+### Phase 3: File and Directory Renaming (90 minutes)
+**Goal**: Update all internal references to new project name
+
+#### 3.1 Directory Structure Updates
+```bash
+# Move to workspace parent directory
+cd ~/
+
+# Rename local project directory
+mv _K/_CODE/DEV/priceup _K/_CODE/DEV/priceup
+
+# Update working directory
+cd _K/_CODE/DEV/priceup
+```
+
+#### 3.2 File Content Updates
+**Critical Files to Update:**
+- [ ] `README.md` - Update title and references
+- [ ] `docs/DETAILED.md` - Update project name references  
+- [ ] `shell_alias_setup.py` - Update project paths
+- [ ] `src/constants.py` - Update any hardcoded project names
+- [ ] `src/path_configuration.py` - Update default paths
+- [ ] All spec files - Update project references
+
+**Search and Replace Operations:**
+```bash
+# Find all references to old name
+grep -r "priceup" . --exclude-dir=.git
+
+# Update Python files
+find . -name "*.py" -exec sed -i '' 's/priceup/priceup/g' {} +
+
+# Update documentation files  
+find . -name "*.md" -exec sed -i '' 's/priceup/priceup/g' {} +
+
+# Update any configuration files
+find . -name "*.json" -exec sed -i '' 's/priceup/priceup/g' {} +
+```
+
+#### 3.3 Verify File Updates
+```bash
+# Check for remaining old references
+grep -r "priceup" . --exclude-dir=.git
+
+# Test basic functionality
+python3 pricing_tool_accelerator.py --help
+
+# Run tests to verify functionality
+cd src && python3 -m pytest ../tests/ -v
+```
+
+### Phase 4: OneDrive Coordination (60 minutes + coordination time)
+**Goal**: Coordinate OneDrive folder rename and team notification
+
+#### 4.1 Prepare Team Notifications
+**Email Template:**
+```
+Subject: OneDrive Folder Rename - Action Required
+
+The shared OneDrive folder "_PricingToolAccel" will be renamed to "_priceup" 
+on [DATE] at [TIME].
+
+Required Actions:
+1. Update any bookmarks to the new folder name
+2. Update local OneDrive sync paths if applicable  
+3. Update any scripts or tools pointing to the old folder name
+
+Timeline:
+- [DATE-3]: Backup creation
+- [DATE]: Folder rename execution
+- [DATE+1]: Access verification and support
+
+Contact [ADMIN] for any questions or issues.
+```
+
+#### 4.2 Execute OneDrive Coordination
+- [ ] Send team notifications 3 days in advance
+- [ ] Coordinate with OneDrive admin for rename timing
+- [ ] Verify backup creation before rename
+- [ ] Monitor rename execution
+- [ ] Validate team access post-rename
+
+#### 4.3 Update User Configurations
+**For each team member:**
+```bash
+# Update path configuration if using local config files
+# This varies by user setup - provide guidance document
+```
+
+### Phase 5: User Configuration Updates (45 minutes)
+**Goal**: Update individual user configurations and shell aliases
+
+#### 5.1 Update Local Configuration Files
+```bash
+# Update user config if exists
+if [ -f ~/.priceup_config.json ]; then
+    sed -i '' 's/_PricingToolAccel/_priceup/g' ~/.priceup_config.json
+fi
+
+# Update any shell aliases  
+if grep -q "priceup" ~/.zshrc; then
+    sed -i '' 's/priceup/priceup/g' ~/.zshrc
+    sed -i '' 's/_PricingToolAccel/_priceup/g' ~/.zshrc
+    source ~/.zshrc
+fi
+```
+
+#### 5.2 Test Updated Configurations
+```bash
+# Test shell aliases
+priceup --help
+
+# Test OneDrive path resolution
+python3 -c "from src.path_resolution import resolve_onedrive_path; print(resolve_onedrive_path())"
+
+# Test full workflow
+python3 pricing_tool_accelerator.py --dry-run
+```
+
+### Phase 6: Validation and Cleanup (30 minutes)
+**Goal**: Verify complete migration success and clean up
+
+#### 6.1 Comprehensive Validation
+```bash
+# Repository validation
+gh api repos/keharris/priceup > new-repo-info.json
+diff repo-backup-info.json new-repo-info.json
+
+# Functionality validation  
+python3 -m pytest tests/ -v
+
+# User workflow validation
+python3 pricing_tool_accelerator.py --version
+```
+
+#### 6.2 Documentation Updates
+- [ ] Update all README files with new repository URLs
+- [ ] Update team documentation with new OneDrive paths
+- [ ] Update any deployment or setup guides
+- [ ] Create migration completion report
+
+#### 6.3 Cleanup and Finalization
+```bash
+# Clean up backup files (keep for 30 days)
+# Remove temporary migration files
+# Archive migration logs
+
+# Commit final updates
+git add .
+git commit -m "Complete project rename: priceup → priceup"
+git push origin main
+```
+
+## Rollback Procedures
+
+### Emergency Rollback (if critical issues occur)
+
+#### GitHub Repository Rollback
+```bash
+# Rename repository back to original
+gh api repos/keharris/priceup -X PATCH -f name=priceup
+
+# Update local remote
+git remote set-url origin https://github.com/keharris/priceup.git
+```
+
+#### File System Rollback
+```bash
+# Restore from backup
+rm -rf ~/path/to/priceup
+cp -r priceup-backup-YYYYMMDD ~/path/to/priceup
+```
+
+#### OneDrive Rollback
+- Contact OneDrive administrator for emergency folder rename back
+- Notify team of rollback immediately
+- Restore user configurations from backup
+
+## Success Criteria
+
+### GitHub Migration Success
+- [ ] Repository accessible at new URL
+- [ ] Old URL redirects correctly  
+- [ ] All branches, tags, and releases preserved
+- [ ] Repository permissions maintained
+- [ ] All integrations still functional
+
+### File System Migration Success
+- [ ] All files updated with new project name
+- [ ] No broken internal references
+- [ ] All tests passing
+- [ ] Basic functionality working
+- [ ] No old project name references remaining
+
+### OneDrive Migration Success  
+- [ ] Folder accessible at new location
+- [ ] All team members maintain access
+- [ ] File content integrity preserved
+- [ ] Sharing permissions maintained
+- [ ] Backup created and verified
+
+### User Configuration Success
+- [ ] All user configurations updated
+- [ ] Shell aliases working correctly
+- [ ] OneDrive paths resolving correctly
+- [ ] No user workflow interruptions
+
+## Risk Mitigation
+
+### High-Risk Operations
+1. **GitHub Repository Rename**: Low risk with automatic redirects
+2. **OneDrive Folder Rename**: Medium risk requiring coordination
+3. **Mass File Updates**: Medium risk of breaking functionality
+4. **User Configuration Updates**: High risk of workflow interruption
+
+### Mitigation Strategies
+- Comprehensive backups before all changes
+- Phased implementation with validation at each step
+- Coordinated team communication and scheduling
+- Tested rollback procedures for each phase
+- Functionality validation after each major change
+
+## Communication Plan
+
+### Pre-Migration (1 week before)
+- [ ] Team notification of upcoming changes
+- [ ] OneDrive administrator coordination
+- [ ] Schedule confirmation and final timeline
+
+### During Migration
+- [ ] Real-time updates on progress
+- [ ] Immediate notification of any issues
+- [ ] Coordination with OneDrive admin during folder rename
+
+### Post-Migration (1 week after)
+- [ ] Migration completion announcement  
+- [ ] Updated documentation distribution
+- [ ] Support period for any user issues
+- [ ] Migration success metrics and lessons learned
