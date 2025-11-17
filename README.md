@@ -14,6 +14,14 @@ The DTT Pricing Tool Accelerator automates the time-consuming process of setting
 
 **✨ After first-time setup, just type `priceup` from anywhere to use the tool!**
 
+## Version Information
+
+Current version: **2025.11.18_1**
+
+To check your version: `python3 pricing_tool_accelerator.py --version`
+
+The tool automatically checks for updates and will notify you when newer versions are available.
+
 ## Getting Started
 
 ### For Git Beginners (First-Time Setup)
