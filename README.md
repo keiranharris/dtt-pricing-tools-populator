@@ -1,10 +1,10 @@
-# DTT Pricing Tool Accelerator
+# PriceUp (Pricing Tool Accelerator)
 
 **Automated pricing tool spreadsheet setup and population system**
 
 ## Overview
 
-The DTT Pricing Tool Accelerator automates the time-consuming process of setting up pricing spreadsheets by:
+PriceUp (Pricing Tool Accelerator) automates the time-consuming process of setting up pricing spreadsheets by:
 
 - 📄 Copying template Excel files with intelligent naming
 - 📋 Populating data from CLI inputs and constants files  
