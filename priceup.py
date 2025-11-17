@@ -13,6 +13,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # ============================================================================
+# FEATURE 011: VERSION CONTROL INTEGRATION
+# ============================================================================
+# Version display and update checking
+
+from version_cli_integration import integrate_version_display_and_checks
+
+def main():
+    """Main application entry point with version integration."""
+    # Handle version display and update checking first
+    should_continue = integrate_version_display_and_checks()
+    if not should_continue:
+        sys.exit(0)
+    
+    # Continue with original application logic
+    run_pricing_tool_accelerator()
+
+# ============================================================================
 # FEATURE 002: EXCEL DATA POPULATION CONFIGURATION
 # ============================================================================
 # These constants control data population from the constants file.
@@ -287,7 +304,7 @@ def show_configuration() -> None:
         print(f"❌ Unexpected error: {e}")
 
 
-def main() -> None:
+def run_pricing_tool_accelerator() -> None:
     """Main entry point for the pricing tool accelerator."""
     
     # Check for command line arguments

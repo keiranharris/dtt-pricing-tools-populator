@@ -14,6 +14,14 @@ PriceUp (Pricing Tool Accelerator) automates the time-consuming process of setti
 
 **✨ After first-time setup, just type `priceup` from anywhere to use the tool!**
 
+## Version Information
+
+Current version: **2025.11.18_1**
+
+To check your version: `python3 priceup.py --version`
+
+The tool automatically checks for updates and will notify you when newer versions are available.
+
 ## Getting Started
 
 ### For Git Beginners (First-Time Setup)
@@ -56,7 +64,7 @@ PriceUp (Pricing Tool Accelerator) automates the time-consuming process of setti
 
 Check that the tool downloaded correctly:
 ```bash
-ls -la pricing_tool_accelerator.py
+ls -la priceup.py
 ```
 If you see file details, you're ready for setup! If you see "No such file", something went wrong with the download.
 
@@ -64,7 +72,7 @@ If you see file details, you're ready for setup! If you see "No such file", some
 
 1. **Run the tool once** (this creates the easy 'priceup' shortcut):
    ```bash
-   python3 pricing_tool_accelerator.py
+   python3 priceup.py
    ```
 
 2. **What to expect during first-time setup:**
@@ -109,7 +117,7 @@ Once you've completed the first-time setup above, using the pricing tool is simp
 
 ```
 priceup/
-├── pricing_tool_accelerator.py    # Main application entry point
+├── priceup.py    # Main application entry point
 ├── src/                          # Core application modules
 │   ├── constants.py              # Dynamic path configuration
 │   ├── path_configuration.py     # OneDrive path management

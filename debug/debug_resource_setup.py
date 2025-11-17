@@ -134,7 +134,7 @@ def show_usage_instructions():
     print("   NOT: Rows with just 'Group 1', 'Group 2', etc.")
     print()
     print("3. 🚀 Run the main pricing tool accelerator:")
-    print("   python3 pricing_tool_accelerator.py")
+    print("   python3 priceup.py")
     print()
     print("4. 🔍 The Resource Setup data will be copied to empty rows in target file")
     print("   Look for: Resource data in rows that previously had 'Group 1' placeholders")

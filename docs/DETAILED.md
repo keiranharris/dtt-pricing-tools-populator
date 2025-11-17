@@ -233,7 +233,7 @@ python3 pricing_tool_accelerator.py
 
 1. **Check the error message carefully** - it often contains specific guidance
 2. **Run the tool with verbose logging** enabled for detailed diagnostics
-3. **Try the shell alias setup tool directly**: `python3 shell_alias_setup.py --debug`
+3. **Shell alias setup is automatic** - just run `python3 priceup.py` and it will set up the alias
 4. **Contact your team's technical lead** with error details and screenshots
 5. **Include your system information**:
    ```bash
