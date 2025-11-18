@@ -26,29 +26,29 @@ from data_models import (
 # Feature 004: Date calculation functions
 def calculate_default_start_date() -> str:
     """
-    Calculate default start date as next business day after 4 weeks from current date.
+    Calculate default start date as Monday at least 4 weeks from current date.
     
     Returns:
         Formatted date string in DD/MM/YY format with day name for clarity
         
     Example:
-        Current date: 12/10/25 (Sunday)
-        4 weeks later: 09/11/25 (Sunday) 
-        Next business day: 10/11/25 (Monday)
-        Returns: "10/11/25 (Monday - next business day after 4 weeks)"
+        Current date: 18/11/25 (Tuesday)
+        4 weeks later: 16/12/25 (Tuesday) 
+        Next Monday: 22/12/25 (Monday)
+        Returns: "22/12/25 (Monday - at least 4 weeks from now)"
     """
     current_date = datetime.now().date()
     future_date = current_date + timedelta(weeks=4)
     
-    # Find next business day (Monday=0, Sunday=6)
-    days_to_add = 0
-    while (future_date + timedelta(days=days_to_add)).weekday() > 4:  # 5=Saturday, 6=Sunday
-        days_to_add += 1
+    # Find next Monday (Monday=0 in Python weekday())
+    days_until_monday = (0 - future_date.weekday()) % 7
+    if days_until_monday == 0 and future_date.weekday() != 0:
+        # If we're exactly 4 weeks and it's not already Monday, go to next Monday
+        days_until_monday = 7
     
-    business_date = future_date + timedelta(days=days_to_add)
-    day_name = business_date.strftime("%A")
+    monday_date = future_date + timedelta(days=days_until_monday)
     
-    return f"{business_date.strftime('%d/%m/%y')} ({day_name} - next business day after 4 weeks)"
+    return f"{monday_date.strftime('%d/%m/%y')} (Monday - at least 4 weeks from now)"
 
 
 def parse_date_input(date_string: str) -> Optional[datetime]:
