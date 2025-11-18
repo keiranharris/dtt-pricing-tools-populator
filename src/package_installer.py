@@ -199,7 +199,7 @@ class PackageInstaller:
         cmd.append(package_spec)
         
         # Add common flags for better reliability
-        cmd.extend(['--disable-pip-version-check', '--no-input'])
+        cmd.extend(['--disable-pip-version-check', '--no-input', '--break-system-packages'])
         
         return cmd
         

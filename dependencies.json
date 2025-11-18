@@ -3,7 +3,9 @@
     "xlwings": {
       "min_version": "0.24.0",
       "import_name": "xlwings",
-      "required_for": ["excel_operations"],
+      "required_for": [
+        "excel_operations"
+      ],
       "installation_notes": "Required for Excel file manipulation and automation",
       "optional": false
     }
@@ -11,5 +13,5 @@
   "python_version": "3.11+",
   "last_updated": "2025-11-18",
   "check_on_startup": true,
-  "last_checked": null
+  "last_checked": "2025-11-18T11:05:40.662176"
 }
