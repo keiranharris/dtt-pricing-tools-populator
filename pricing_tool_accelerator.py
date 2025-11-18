@@ -142,47 +142,6 @@ def setup_shell_alias_if_needed() -> bool:
         return True
 
 
-def setup_dependencies_if_needed() -> bool:
-    """
-    Check and install required dependencies if needed.
-    
-    This function checks for required Python packages (like xlwings) and
-    attempts to install them automatically. It operates silently on success
-    and never raises exceptions that would interrupt the main application.
-    
-    Returns:
-        bool: True to continue main app execution (always returns True)
-    """
-    try:
-        # Import dependency management functionality
-        from src.dependency_manager import DependencyManager
-        
-        # Initialize dependency manager
-        dependency_manager = DependencyManager()
-        
-        # Check dependencies
-        dependencies_satisfied = dependency_manager.check_dependencies()
-        
-        if dependencies_satisfied:
-            if VERBOSE_LOGGING_ENABLED:
-                print("✅ All dependencies satisfied")
-        else:
-            # Dependencies missing but don't block execution
-            # The dependency manager will have logged specific issues
-            if VERBOSE_LOGGING_ENABLED:
-                print("⚠️  Some dependencies may be missing")
-                print("   Check logs for details. Application will continue...\n")
-        
-        return True
-        
-    except Exception as e:
-        # Never let dependency checking interrupt the main application
-        if VERBOSE_LOGGING_ENABLED:
-            print(f"⚠️  Dependency check failed: {str(e)}")
-            print("   Continuing with main application...\n")
-        return True
-
-
 def setup_onedrive_paths_if_needed(force_reconfigure: bool = False) -> bool:
     """
     Set up OneDrive path configuration if needed.
@@ -376,9 +335,6 @@ def run_pricing_tool_accelerator() -> None:
     # Feature 007: Initialize production logging system
     from src.system_integration import setup_production_logging
     setup_production_logging(verbose_enabled=VERBOSE_LOGGING_ENABLED)
-    
-    # Feature 012: Check and install required dependencies
-    setup_dependencies_if_needed()
     
     # Feature 008: Shell alias auto-setup for easy access
     setup_shell_alias_if_needed()
